@@ -1,6 +1,7 @@
 import { useState, type FormEvent, type InputHTMLAttributes } from "react";
 import { Link } from "react-router";
-import { addStory, clearCurrentTrip, currentTrip, findSource, saveTrip, useStore } from "../lib/store";
+import { VENUE, arrivalMessage, whatsappLink } from "../data/venue";
+import { addStory, checkIn, clearCurrentTrip, currentTrip, findSource, saveTrip, useStore } from "../lib/store";
 import type { GuestType, Trip } from "../lib/types";
 import { GUEST_TYPES, guestTypeLabel } from "./Discover";
 
@@ -173,6 +174,7 @@ function Confirmation({ trip }: { trip: Trip }) {
   const visit = useStore((s) => s.visits.find((v) => v.tripId === trip.id));
   const story = useStore((s) => s.stories.find((st) => st.tripId === trip.id));
   const visited = trip.status === "visited";
+  const pending = trip.status === "checked-in";
 
   return (
     <div className="rise space-y-6" data-testid="confirmation">
@@ -204,6 +206,8 @@ function Confirmation({ trip }: { trip: Trip }) {
         </p>
       </section>
 
+      {!visited && <ArrivalSection trip={trip} pending={pending} />}
+
       {visited && (
         <>
           <StoryBox tripId={trip.id} existing={story?.text} />
@@ -231,7 +235,9 @@ function Confirmation({ trip }: { trip: Trip }) {
               "Status",
               visited && visit
                 ? `Visited · confirmed ${new Date(visit.confirmedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`
-                : "Saved, visit not yet confirmed",
+                : pending
+                  ? "Pending check-in · waiting for staff to confirm"
+                  : "Saved, visit not yet confirmed",
             ],
           ].map(([k, v]) => (
             <div key={k} className="flex flex-wrap justify-between gap-x-4 gap-y-1 py-3">
@@ -260,6 +266,72 @@ function Confirmation({ trip }: { trip: Trip }) {
         </button>
       </div>
     </div>
+  );
+}
+
+function ArrivalSection({ trip, pending }: { trip: Trip; pending: boolean }) {
+  const address = VENUE.address.value;
+  const mapUrl = VENUE.mapUrl.value;
+  const wa = whatsappLink(arrivalMessage(trip.arrivalCode));
+
+  return (
+    <section aria-labelledby="arrival-heading" className="card space-y-5" data-testid="arrival">
+      <div>
+        <h2 id="arrival-heading" className="text-2xl font-bold">
+          Getting there
+        </h2>
+        <p className="mt-1 text-cocoa-700" data-testid="arrival-address">
+          {address ?? "Address to be confirmed"}
+          <span className="text-cocoa-500"> · {VENUE.area}</span>
+        </p>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        {mapUrl ? (
+          <a href={mapUrl} target="_blank" rel="noreferrer" className="btn-secondary" data-testid="arrival-map">
+            Open map
+          </a>
+        ) : (
+          <div>
+            <button type="button" className="btn-secondary w-full" disabled data-testid="arrival-map">
+              Open map
+            </button>
+            <p className="mt-1.5 text-sm text-cocoa-500">Map link to be confirmed with De Klinic.</p>
+          </div>
+        )}
+        <div>
+          <a href={wa} target="_blank" rel="noreferrer" className="btn-secondary w-full" data-testid="arrival-whatsapp">
+            Message De Klinic on WhatsApp
+          </a>
+          <p className="mt-1.5 text-sm text-cocoa-500">
+            {VENUE.whatsapp.display}
+            {VENUE.whatsapp.isSample && ". Messages won’t reach De Klinic yet."} Your code is in the message.
+          </p>
+        </div>
+      </div>
+
+      <div className="rounded-2xl bg-cream-100 p-4" aria-live="polite">
+        {pending ? (
+          <div data-testid="checkin-pending">
+            <p className="font-bold">
+              Checked in at{" "}
+              {new Date(trip.checkedInAt!).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
+            </p>
+            <p className="mt-1 text-cocoa-700">
+              Show <span className="font-mono font-bold">{trip.arrivalCode}</span> to a member of staff. Your visit
+              becomes verified once they confirm it.
+            </p>
+          </div>
+        ) : (
+          <>
+            <p className="text-cocoa-700">At the door? Let De Klinic know you’re here, then show your code to staff.</p>
+            <button type="button" className="btn-primary mt-3" onClick={() => checkIn(trip.id)} data-testid="checkin">
+              I’ve arrived
+            </button>
+          </>
+        )}
+      </div>
+    </section>
   );
 }
 

@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { DEMO_ARRIVAL_CODE } from "../lib/seed";
 import { confirmVisit, findSource, findTripByCode, normaliseCode, useStore } from "../lib/store";
 import { guestTypeLabel } from "./Discover";
+import type { TripStatus } from "../lib/types";
 import { formatDate } from "./SaveTrip";
 
 export function Staff() {
@@ -83,12 +84,20 @@ export function Staff() {
               <Detail label="From" value={trip.originCity} />
               <Detail label="Group size" value={`${trip.groupSize} ${trip.groupSize === 1 ? "guest" : "guests"}`} />
               <Detail label="Who’s coming" value={guestTypeLabel(trip.guestType)} testId="staff-guest-type" />
-              <div className="col-span-2">
-                <Detail label="Source" value={source?.label ?? "Direct (no referral)"} />
-              </div>
+              <Detail label="Source" value={source?.label ?? "Direct (no referral)"} />
+              <Detail
+                label="Checked in"
+                value={trip.checkedInAt ? `Yes, ${shortTime(trip.checkedInAt)}` : "Not yet"}
+                testId="staff-checkin"
+              />
             </dl>
 
             {trip.status === "saved" && (
+              <p className="text-sm text-cocoa-700" data-testid="staff-not-checked-in">
+                The guest hasn’t tapped “I’ve arrived”. You can still confirm the visit if they’re here.
+              </p>
+            )}
+            {(trip.status === "saved" || trip.status === "checked-in") && (
               <button
                 type="button"
                 className="btn-primary"
@@ -140,15 +149,27 @@ function Detail({ label, value, testId }: { label: string; value: string; testId
   );
 }
 
-export function StatusPill({ status }: { status: "discovered" | "saved" | "visited" }) {
+export const STATUS_LABEL: Record<TripStatus, string> = {
+  discovered: "Discovered",
+  saved: "Saved",
+  "checked-in": "Pending check-in",
+  visited: "Visited",
+};
+
+function shortTime(iso: string) {
+  return new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+}
+
+export function StatusPill({ status }: { status: TripStatus }) {
   const styles = {
     discovered: "bg-cream-200 text-cocoa-700",
     saved: "bg-gold-400/30 text-cocoa-900",
+    "checked-in": "bg-clay-500/15 text-clay-700",
     visited: "bg-palm-100 text-palm-600",
   }[status];
   return (
-    <span className={`rounded-full px-3 py-1 text-sm font-bold capitalize ${styles}`} data-testid="status-pill">
-      {status}
+    <span className={`rounded-full px-3 py-1 text-sm font-bold whitespace-nowrap ${styles}`} data-testid="status-pill">
+      {STATUS_LABEL[status]}
     </span>
   );
 }

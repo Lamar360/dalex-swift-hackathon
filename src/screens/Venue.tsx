@@ -1,13 +1,8 @@
 import { Link, useNavigate } from "react-router";
+import { OFFER_FIELDS, TBC, VENUE, type VenueField } from "../data/venue";
 import { currentTrip, findSource, markInterested, useStore } from "../lib/store";
 
-const VENUE_DETAILS: { label: string; value?: string }[] = [
-  { label: "Location", value: "Accra, Ghana" },
-  { label: "Opening hours" },
-];
-
-/** Still to be confirmed with the owners: shown as placeholders, never guessed. */
-const OFFER_PLACEHOLDERS = ["Menu", "Prices", "Delivery coverage", "Group bookings", "Events"];
+const VENUE_DETAILS: VenueField[] = [{ label: "Area", value: VENUE.area }, VENUE.address, VENUE.openingHours];
 
 function BriefTag({ children }: { children: React.ReactNode }) {
   return (
@@ -18,7 +13,7 @@ function BriefTag({ children }: { children: React.ReactNode }) {
 }
 
 function Tbc() {
-  return <span className="tbc">To be confirmed</span>;
+  return <span className="tbc">{TBC}</span>;
 }
 
 export function Venue() {
@@ -37,7 +32,7 @@ export function Venue() {
         {source && (
           <p className="text-sm font-semibold text-clay-700">Recommended by {source.label}</p>
         )}
-        <h1 className="text-4xl font-bold sm:text-5xl">De Klinic Restaurant &amp; Pub</h1>
+        <h1 className="text-4xl font-bold sm:text-5xl">{VENUE.name}</h1>
         <p className="text-lg text-cocoa-700">
           A place to eat, drink and gather in Accra. Full venue details are being confirmed with the owners.
         </p>
@@ -110,12 +105,10 @@ export function Venue() {
         </div>
         <div className="card">
           <dl className="divide-y divide-cream-200">
-            {OFFER_PLACEHOLDERS.map((label) => (
-              <div key={label} className="flex flex-wrap items-center justify-between gap-2 py-3 first:pt-0 last:pb-0">
-                <dt className="font-semibold">{label}</dt>
-                <dd>
-                  <Tbc />
-                </dd>
+            {OFFER_FIELDS.map((f) => (
+              <div key={f.label} className="flex flex-wrap items-center justify-between gap-2 py-3 first:pt-0 last:pb-0">
+                <dt className="font-semibold">{f.label}</dt>
+                <dd>{f.value ?? <Tbc />}</dd>
               </div>
             ))}
           </dl>

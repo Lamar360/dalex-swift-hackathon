@@ -4,7 +4,7 @@ import type { AppState, JourneyEvent, Trip } from "./types";
  * SAMPLE DATA ONLY. None of these people, groups or quotes are real.
  * Nothing here is a fact about De Klinic Restaurant & Pub.
  */
-export const STATE_VERSION = 3;
+export const STATE_VERSION = 4;
 
 export const DEMO_ARRIVAL_CODE = "DK-7HQ4";
 
@@ -235,6 +235,28 @@ export function createSeed(): AppState {
     ],
     referrals: [{ id: "ref-1", fromTripId: "trip-s2", sourceId: "ref-trip-s2", createdAt: kwameReferral }],
     events,
+    questions: [
+      {
+        id: "q-sample-1",
+        text: "Can you take a booking for 12 of us on 27 December? (sample question)",
+        createdAt: "2026-11-21T19:04:00.000Z",
+        tripId: "trip-s6",
+        status: "open",
+      },
+      {
+        id: "q-sample-2",
+        text: "Is there live music or an event on New Year's Eve? (sample question)",
+        createdAt: "2026-11-23T08:47:00.000Z",
+        status: "open",
+      },
+      {
+        id: "q-sample-3",
+        text: "Do you deliver to East Legon? (sample question)",
+        createdAt: "2026-11-24T14:15:00.000Z",
+        tripId: "trip-s4",
+        status: "open",
+      },
+    ],
     session: {
       visitorId: newId("visitor"),
       sourceId: null,

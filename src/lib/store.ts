@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { createSeed, newId, STATE_VERSION } from "./seed";
-import type { AppState, EventType, GuestType, JourneyEvent, Referral, Source, Trip } from "./types";
+import type { AppState, EventType, GuestType, JourneyEvent, Question, Referral, Source, Trip } from "./types";
 
 /**
  * The app's only persistence layer: one typed state object in localStorage.
@@ -195,10 +195,25 @@ export function saveTrip(input: SaveTripInput): Trip {
   return trip;
 }
 
-export function confirmVisit(tripId: string) {
+/** The guest's own "I've arrived" tap: records a pending check-in. It never verifies the visit. */
+export function checkIn(tripId: string) {
   setState((s) => {
     const trip = s.trips.find((t) => t.id === tripId);
     if (!trip || trip.status !== "saved") return s;
+    const at = new Date().toISOString();
+    return {
+      ...s,
+      trips: s.trips.map((t) => (t.id === tripId ? { ...t, status: "checked-in", checkedInAt: at } : t)),
+      events: [...s.events, event("checked_in", s, { at, tripId, visitorId: trip.visitorId, sourceId: trip.sourceId })],
+    };
+  });
+}
+
+/** Staff only. Works whether or not the guest checked in first. */
+export function confirmVisit(tripId: string) {
+  setState((s) => {
+    const trip = s.trips.find((t) => t.id === tripId);
+    if (!trip || (trip.status !== "saved" && trip.status !== "checked-in")) return s;
     const confirmedAt = new Date().toISOString();
     return {
       ...s,
@@ -254,6 +269,23 @@ export function createReferral(tripId: string): Referral | undefined {
     ],
   }));
   return referral;
+}
+
+/** Stores a question the demo assistant could not answer, for De Klinic to pick up. */
+export function askQuestion(text: string): Question {
+  const q: Question = {
+    id: newId("q"),
+    text,
+    createdAt: new Date().toISOString(),
+    ...(state.session.tripId ? { tripId: state.session.tripId } : {}),
+    status: "open",
+  };
+  setState((s) => ({
+    ...s,
+    questions: [...s.questions, q],
+    events: [...s.events, event("question_asked", s, { at: q.createdAt, tripId: q.tripId ?? null })],
+  }));
+  return q;
 }
 
 /** Lets the traveller start a fresh trip form (keeps their source). */

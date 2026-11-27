@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router";
 import { findSource, getState, tripTimeline, useStore } from "../lib/store";
 import type { EventType, JourneyEvent } from "../lib/types";
 import { GUEST_TYPES, guestTypeLabel, SOURCE_TYPE_ICON, SOURCE_TYPE_LABEL } from "./Discover";
 import { formatDate } from "./SaveTrip";
-import { StatusPill } from "./Staff";
+import { STATUS_LABEL, StatusPill } from "./Staff";
 
 // The December this prototype is planning for.
 const DEC_START = "2026-12-01";
@@ -22,7 +23,7 @@ export function Dashboard() {
     for (const e of events) {
       if (e.type === "discovered" && !discoveredVisitors.has(e.visitorId)) discoveredVisitors.set(e.visitorId, e.sourceId);
     }
-    const saved = trips.filter((t) => t.status === "saved" || t.status === "visited");
+    const saved = trips.filter((t) => t.status !== "discovered");
     const visited = trips.filter((t) => t.status === "visited");
     const referredTrips = new Set(referrals.map((r) => r.fromTripId));
 
@@ -33,7 +34,7 @@ export function Dashboard() {
       return { id, discovered, saved: sv, visited: vi };
     });
 
-    const december = trips.filter((t) => t.status === "saved" && t.travelFrom <= DEC_END && t.travelTo >= DEC_START);
+    const december = trips.filter((t) => (t.status === "saved" || t.status === "checked-in") && t.travelFrom <= DEC_END && t.travelTo >= DEC_START);
     return {
       funnel: [
         { key: "discovered", label: "Discovered", value: discoveredVisitors.size },
@@ -49,6 +50,7 @@ export function Dashboard() {
         return { ...g, trips: ts.length, guests: ts.reduce((n, t) => n + t.groupSize, 0) };
       }),
       savedCount: saved.length,
+      pendingCheckIns: trips.filter((t) => t.status === "checked-in").length,
     };
   }, [events, trips, sources, referrals]);
 
@@ -63,7 +65,7 @@ export function Dashboard() {
         <h1 className="text-4xl font-bold">Where December guests come from</h1>
       </section>
 
-      <section className="grid grid-cols-2 gap-3">
+      <section className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <div className="card tilt bg-cocoa-900 text-cream-100">
           <p className="text-sm font-semibold text-sand-300">Expected December arrivals</p>
           <p className="font-display text-4xl font-bold text-gold-400" data-testid="dec-trips">
@@ -77,6 +79,13 @@ export function Dashboard() {
             {stats.decGuests}
           </p>
           <p className="text-sm text-cream-200">across those trips</p>
+        </div>
+        <div className="card tilt col-span-2 flex items-center justify-between gap-4 sm:col-span-1 sm:block">
+          <p className="text-sm font-semibold text-cocoa-500">Pending check-ins</p>
+          <p className="font-display text-4xl font-bold text-clay-600" data-testid="pending-checkins">
+            {stats.pendingCheckIns}
+          </p>
+          <p className="hidden text-sm text-cocoa-500 sm:block">waiting for staff</p>
         </div>
       </section>
 
@@ -180,30 +189,84 @@ export function Dashboard() {
         <p className="text-xs text-cocoa-500">Saved and visited trips, by what guests chose on the trip form. Sample data.</p>
       </section>
 
+      <QuestionsPanel />
+
       <GuestTimeline />
     </div>
+  );
+}
+
+function QuestionsPanel() {
+  const questions = useStore((s) => s.questions);
+  const trips = useStore((s) => s.trips);
+  const open = [...questions].filter((q) => q.status === "open").sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  return (
+    <section aria-labelledby="questions-heading" className="card space-y-3" data-testid="questions-panel">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 id="questions-heading" className="text-xl font-bold">
+          Questions from travellers
+        </h2>
+        <span className="rounded-full bg-gold-400/30 px-3 py-0.5 text-sm font-bold" data-testid="questions-count">
+          {open.length} open
+        </span>
+      </div>
+      {open.length === 0 ? (
+        <p className="text-cocoa-700">No open questions. Anything the demo assistant can’t answer lands here.</p>
+      ) : (
+        <ul className="divide-y divide-cream-200">
+          {open.map((q) => {
+            const trip = trips.find((t) => t.id === q.tripId);
+            return (
+              <li key={q.id} className="py-3" data-testid="question">
+                <p className="font-semibold">{q.text}</p>
+                <p className="text-sm text-cocoa-500">
+                  {new Date(q.createdAt).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                  {trip ? ` · ${trip.name}` : " · No trip saved yet"}
+                </p>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      <p className="text-xs text-cocoa-500">Collected by the demo assistant (not AI). Sample data.</p>
+    </section>
   );
 }
 
 const EVENT_LABEL: Record<EventType, string> = {
   discovered: "Discovered De Klinic",
   saved: "Saved trip to itinerary",
+  checked_in: "Tapped “I’ve arrived” (pending staff check)",
   visit_confirmed: "Visit confirmed by staff",
   referred: "Created a referral link",
+  question_asked: "Asked De Klinic a question",
 };
 
 const EVENT_DOT: Record<EventType, string> = {
   discovered: "bg-sand-300",
   saved: "bg-gold-400",
+  checked_in: "bg-clay-500/50",
   visit_confirmed: "bg-palm-600",
   referred: "bg-clay-500",
+  question_asked: "bg-cocoa-500",
 };
 
 function GuestTimeline() {
   const trips = useStore((s) => s.trips);
   const events = useStore((s) => s.events);
-  const [tripId, setTripId] = useState(() => [...trips].sort((a, b) => b.savedAt.localeCompare(a.savedAt))[0]?.id ?? "");
+  const [params] = useSearchParams();
+  const linked = params.get("trip");
+  const [tripId, setTripId] = useState(
+    () =>
+      (linked && trips.some((t) => t.id === linked) ? linked : undefined) ??
+      [...trips].sort((a, b) => b.savedAt.localeCompare(a.savedAt))[0]?.id ??
+      "",
+  );
   const trip = trips.find((t) => t.id === tripId);
+  // Deep link from Guest journeys: bring the timeline into view.
+  useEffect(() => {
+    if (linked) document.getElementById("timeline")?.scrollIntoView();
+  }, [linked]);
   // Recompute when the log changes; tripTimeline reads the latest state.
   const timeline = useMemo(() => (trip ? tripTimeline(getState(), trip) : []), [trip, events]);
 
@@ -224,7 +287,7 @@ function GuestTimeline() {
   }
 
   return (
-    <section aria-labelledby="timeline-heading" className="card space-y-4">
+    <section id="timeline" aria-labelledby="timeline-heading" className="card scroll-mt-28 space-y-4">
       <h2 id="timeline-heading" className="text-xl font-bold">
         Guest timeline
       </h2>
@@ -235,7 +298,7 @@ function GuestTimeline() {
         <select id="guest" className="field" value={tripId} onChange={(e) => setTripId(e.target.value)} data-testid="timeline-picker">
           {trips.map((t) => (
             <option key={t.id} value={t.id}>
-              {t.name} · {t.arrivalCode} · {t.status}
+              {t.name} · {t.arrivalCode} · {STATUS_LABEL[t.status]}
             </option>
           ))}
         </select>

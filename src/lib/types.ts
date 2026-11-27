@@ -18,7 +18,8 @@ export interface Source {
   referrerTripId?: string;
 }
 
-export type TripStatus = "discovered" | "saved" | "visited";
+/** "checked-in": the guest tapped "I've arrived"; only staff can move it on to "visited". */
+export type TripStatus = "discovered" | "saved" | "checked-in" | "visited";
 
 export interface Trip {
   id: string;
@@ -37,6 +38,8 @@ export interface Trip {
   savedAt: string;
   arrivalCode: string;
   status: TripStatus;
+  /** ISO timestamp of the guest's own "I've arrived" tap. Never counts as verification. */
+  checkedInAt?: string;
 }
 
 export interface Visit {
@@ -61,7 +64,16 @@ export interface Referral {
   createdAt: string;
 }
 
-export type EventType = "discovered" | "saved" | "visit_confirmed" | "referred";
+export type EventType = "discovered" | "saved" | "checked_in" | "visit_confirmed" | "referred" | "question_asked";
+
+/** A traveller question the demo assistant could not answer, passed on to De Klinic. */
+export interface Question {
+  id: string;
+  text: string;
+  createdAt: string;
+  tripId?: string;
+  status: "open";
+}
 
 /** Append-only log: every journey timeline is derived from this. */
 export interface JourneyEvent {
@@ -92,5 +104,6 @@ export interface AppState {
   stories: Story[];
   referrals: Referral[];
   events: JourneyEvent[];
+  questions: Question[];
   session: Session;
 }

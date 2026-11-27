@@ -81,6 +81,10 @@ for (const src of NEW_SOURCES) {
     `Sources table: ${src.id} ${src.disc}/${src.saved}/${src.visited} (got ${JSON.stringify(r)})`,
   );
 }
+check((await text("questions-count")) === "3 open", "dashboard shows 3 seeded sample questions");
+check((await page.getByTestId("question").count()) === 3, "questions panel lists the 3 sample questions");
+check((await text("questions-panel")).includes("(sample question)"), "seeded questions are labelled sample");
+check((await text("pending-checkins")) === "0", "seed has 0 pending check-ins");
 const gtBefore = await guestTypes();
 check(
   gtBefore.solo === 1 && gtBefore.friends === 4 && gtBefore.family === 3 && gtBefore.group === 1,
@@ -137,8 +141,42 @@ check(
     toConfirm.includes("Portia has publicly described serving meals bought by a supporter for five followers."),
   "venue: brief story card marked 'to be confirmed with De Klinic'",
 );
+const detailsText = await page.locator("#details-heading").locator("..").innerText();
+check(
+  /Address\s+To be confirmed/.test(detailsText) && /Opening hours\s+To be confirmed/.test(detailsText),
+  "venue file: address and opening hours shown as 'To be confirmed'",
+);
 await page.getByTestId("cta-interested").click();
 check((await text("cta-interested")).includes("Interest noted"), "I'm interested registers");
+
+// Demo assistant (rule-based, not AI).
+await page.getByTestId("tab-venue").waitFor();
+check(true, "traveller tab row shown");
+await page.getByTestId("assistant-open").click();
+await page.getByTestId("assistant-panel").waitFor();
+check((await text("assistant-label")) === "Demo assistant · not AI", "assistant labelled 'Demo assistant · not AI'");
+check(await page.getByTestId("assistant-input").evaluate((el) => el === document.activeElement), "assistant focuses the input on open");
+check((await page.getByTestId("assistant-log").getAttribute("aria-live")) === "polite", "assistant replies are aria-live");
+// Replies carry a visually hidden "De Klinic demo assistant:" prefix for screen readers; strip it.
+const lastReply = async () =>
+  (await page.getByTestId("assistant-reply").last().innerText()).replace(/^De Klinic demo assistant:\s*/, "");
+await page.getByTestId("assistant-chip-menu").click();
+check((await lastReply()).includes("Menu: To be confirmed with De Klinic"), "assistant: menu answer comes from venue file (placeholder)");
+await page.getByTestId("assistant-chip-address").click();
+check((await lastReply()).includes("Accra, Ghana") && (await lastReply()).includes("to be confirmed with de klinic"), "assistant: address is to be confirmed");
+await page.getByTestId("assistant-chip-code").click();
+check((await lastReply()).includes("only verified once staff confirm"), "assistant: explains the arrival code");
+await page.getByTestId("assistant-input").fill("What time do you open on Sundays?");
+await page.getByTestId("assistant-send").click();
+check((await lastReply()).startsWith("Opening hours: To be confirmed with De Klinic"), "assistant: free-text keyword match (opening hours)");
+const UNKNOWN_Q = "Is there parking for a minibus?";
+await page.getByTestId("assistant-input").fill(UNKNOWN_Q);
+await page.getByTestId("assistant-send").click();
+check((await lastReply()) === "I don’t know yet. I’ve passed your question to De Klinic.", "assistant: unknown question is passed on");
+await shot("2-venue-assistant");
+await page.keyboard.press("Escape");
+check((await page.getByTestId("assistant-panel").count()) === 0, "assistant closes on Esc");
+check(await page.getByTestId("assistant-open").evaluate((el) => el === document.activeElement), "focus returns to Ask De Klinic button");
 await shot("2-venue");
 
 // 3. Save trip.
@@ -162,6 +200,22 @@ await shot("3-trip-saved");
 await page.reload();
 check((await text("arrival-code")) === code, "code survives reload");
 
+// Arrival section (values from src/data/venue.ts).
+await page.getByTestId("arrival").waitFor();
+check((await text("arrival-address")).includes("Address to be confirmed"), "arrival: address shown as 'Address to be confirmed'");
+check(await page.getByTestId("arrival-map").isDisabled(), "arrival: map button disabled while map link is a placeholder");
+check((await text("arrival")).includes("Map link to be confirmed"), "arrival: map note shown");
+const wa = await page.getByTestId("arrival-whatsapp").getAttribute("href");
+check(wa.startsWith("https://wa.me/233000000000?text=") && decodeURIComponent(wa).includes(code), `arrival: WhatsApp link carries the code (${wa})`);
+check((await text("arrival")).includes("+233 00 000 0000 (sample number)"), "arrival: WhatsApp number labelled sample");
+await page.getByTestId("checkin").click();
+await page.getByTestId("checkin-pending").waitFor();
+check((await text("trip-status")).includes("Pending check-in"), "I've arrived sets status to Pending check-in");
+check((await page.getByTestId("visit-confirmed").count()) === 0, "guest cannot self-verify: no Visit confirmed after check-in");
+check((await page.getByTestId("submit-story").count()) === 0, "guest cannot post a story before staff confirm");
+check((await page.getByTestId("cta-refer").count()) === 0, "no Refer CTA before staff confirm");
+await shot("3-trip-checked-in");
+
 // Refer is locked before the visit.
 await page.goto(`${base}/refer`);
 await page.getByTestId("refer-locked").waitFor();
@@ -171,6 +225,9 @@ const mid = await dashboardCounts();
 check(mid.discovered === 22 && mid.saved === 10, `dashboard counts the new discovery + save (got ${JSON.stringify(mid)})`);
 check(mid.decTrips === 7 && mid.decGuests === 25, "new December trip adds to expected arrivals (7 trips, 25 guests)");
 check((await guestTypes()).friends === 5, "guest-type breakdown counts the new Friends trip");
+check((await text("pending-checkins")) === "1", "dashboard counts 1 pending check-in");
+check((await text("questions-count")) === "4 open", "unknown assistant question reaches the dashboard (4 open)");
+check((await text("questions-panel")).includes(UNKNOWN_Q), "questions panel lists the new question");
 
 // 4. Staff confirms.
 await page.getByTestId("demo-menu").click();
@@ -184,15 +241,22 @@ await page.getByTestId("staff-code").fill("dk-k3mp");
 await page.getByTestId("staff-lookup").click();
 await page.getByTestId("staff-already").waitFor();
 check(true, "staff: already-confirmed message (seeded visited code, lowercase input)");
-await page.getByTestId("staff-code").fill(code);
+await page.getByTestId("staff-code").fill("DK-Y5NB");
 await page.getByTestId("staff-lookup").click();
 await page.getByTestId("staff-result").waitFor();
+check((await text("staff-checkin")) === "Not yet", "staff: seeded guest shows 'Not yet' checked in");
+check((await page.getByTestId("staff-confirm").count()) === 1, "staff can confirm without a check-in");
+await page.getByTestId("staff-code").fill(code);
+await page.getByTestId("staff-lookup").click();
+await page.getByTestId("staff-result").filter({ hasText: "Adwoa" }).waitFor();
 const result = await text("staff-result");
 check(
   result.includes("Adwoa Asare") && result.includes("4 guests") && result.includes("London Ghanaian Diaspora Circle"),
   "staff sees name, group size and source",
 );
 check((await text("staff-guest-type")) === "Friends", "staff sees guest type (Friends) next to group size");
+check((await text("staff-checkin")).startsWith("Yes"), "staff sees the guest checked in");
+check((await text("status-pill")) === "Pending check-in", "staff sees Pending check-in status");
 await shot("4-staff");
 await page.getByTestId("staff-confirm").click();
 await page.getByTestId("staff-confirmed").waitFor();
@@ -207,6 +271,7 @@ await page.getByTestId("view-traveller").click();
 await page.waitForURL("**/trip");
 await page.getByTestId("visit-confirmed").waitFor();
 check((await text("trip-status")).includes("Visited"), "traveller sees Visit confirmed");
+check((await page.getByTestId("arrival").count()) === 0, "arrival section gone once visit is verified");
 await page.getByTestId("submit-story").click();
 check((await page.locator("#story-error").count()) === 1, "empty story is rejected");
 await page.fill("#story", "Showed our code and were seated with the whole family. Lovely evening.");
@@ -247,13 +312,27 @@ check(
 );
 const opt = await page.locator("[data-testid=timeline-picker] option", { hasText: code }).getAttribute("value");
 await page.getByTestId("timeline-picker").selectOption(opt);
-for (const t of ["discovered", "saved", "visit_confirmed", "referred"]) {
+check((await text("pending-checkins")) === "0", "pending check-ins back to 0 after staff confirm");
+for (const t of ["discovered", "saved", "checked_in", "visit_confirmed", "referred"]) {
   check((await page.getByTestId(`timeline-${t}`).count()) >= 1, `timeline has ${t}`);
 }
 check((await page.getByTestId("timeline").innerText()).includes("Their link brought in a new guest"), "timeline shows the referred guest");
 const sw2 = await page.evaluate(() => document.documentElement.scrollWidth);
 check(sw2 <= 390, `dashboard has no horizontal scroll at 390px (scrollWidth=${sw2})`);
 await shot("7-dashboard");
+
+// Guest journeys page.
+await page.goto(`${base}/guests`);
+await page.getByTestId("guest-list").waitFor();
+check((await page.getByTestId("guest-row").count()) === 10, "Guest journeys lists all 10 trips");
+const adwoaRow = page.getByTestId("guest-row").filter({ hasText: "Adwoa Asare" });
+check((await adwoaRow.innerText()).includes("Visited") && (await adwoaRow.innerText()).includes("Friends"), "guest row shows status and guest type");
+await adwoaRow.getByTestId("guest-timeline-link").click();
+await page.waitForURL("**/dashboard?trip=*");
+await page.getByTestId("timeline").waitFor();
+check((await page.getByTestId("timeline-picker").inputValue()) === opt, "timeline link opens that guest's timeline");
+const swg = await page.evaluate(() => document.documentElement.scrollWidth);
+check(swg <= 390, `guests/dashboard no horizontal scroll at 390px (${swg})`);
 
 // 9. New discovery source types work as ?src= links and appear as sample links.
 await page.goto(`${base}/`);
@@ -302,8 +381,16 @@ const still = await page.evaluate(() => {
 check(still, "prefers-reduced-motion disables hero animations");
 await page.emulateMedia({ reducedMotion: "no-preference" });
 
+// Laptop: assistant open on /trip.
+await page.goto(`${base}/trip`);
+await page.getByTestId("assistant-open").click();
+await page.getByTestId("assistant-chip-events").click();
+await shot("d-trip-assistant");
+const swa = await page.evaluate(() => document.documentElement.scrollWidth);
+check(swa <= 1366, `trip with assistant: no horizontal scroll at 1366px (${swa})`);
+
 // Desktop screenshots.
-for (const [name, path] of [["d-discover", "/?src=dec-accra-itinerary"], ["d-venue", "/venue"], ["d-trip", "/trip"], ["d-dashboard", "/dashboard"], ["d-staff", "/staff"], ["d-refer", "/refer"]]) {
+for (const [name, path] of [["d-discover", "/?src=dec-accra-itinerary"], ["d-venue", "/venue"], ["d-trip", "/trip"], ["d-dashboard", "/dashboard"], ["d-guests", "/guests"], ["d-staff", "/staff"], ["d-refer", "/refer"]]) {
   await page.goto(base + path);
   await shot(name);
 }
@@ -314,6 +401,7 @@ await page.getByRole("button", { name: "Reset demo data" }).click();
 await page.waitForURL(base + "/");
 const reset = await dashboardCounts();
 check(reset.saved === 9 && reset.visited === 3 && reset.referred === 1, "reset restores seed trips");
+check((await text("questions-count")) === "3 open", "reset restores the 3 sample questions");
 
 check(errors.length === 0, `no console errors ${errors.join(" | ")}`);
 await browser.close();

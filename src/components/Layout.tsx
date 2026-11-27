@@ -1,13 +1,38 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router";
 import { currentTrip, referralForTrip, resetDemo, useStore } from "../lib/store";
+import { Assistant } from "./Assistant";
 import { JourneyProgress } from "./JourneyProgress";
 
-const VIEWS = [
-  { label: "Traveller", to: "/", match: ["/", "/venue", "/trip", "/refer"] },
-  { label: "Staff", to: "/staff", match: ["/staff"] },
-  { label: "Owner", to: "/dashboard", match: ["/dashboard"] },
+interface Audience {
+  key: "traveller" | "staff" | "owner";
+  label: string;
+  tabs: { label: string; to: string }[];
+}
+
+const AUDIENCES: Audience[] = [
+  {
+    key: "traveller",
+    label: "Traveller",
+    tabs: [
+      { label: "Home", to: "/" },
+      { label: "Venue", to: "/venue" },
+      { label: "My trip", to: "/trip" },
+      { label: "Refer", to: "/refer" },
+    ],
+  },
+  { key: "staff", label: "Staff", tabs: [{ label: "Confirm visit", to: "/staff" }] },
+  {
+    key: "owner",
+    label: "Owner",
+    tabs: [
+      { label: "Dashboard", to: "/dashboard" },
+      { label: "Guest journeys", to: "/guests" },
+    ],
+  },
 ];
+
+const audienceFor = (pathname: string) => AUDIENCES.find((a) => a.tabs.some((t) => t.to === pathname));
 
 /** Pages that show the compact journey stepper under the header. */
 const STEPPER_PAGES = ["/venue", "/trip", "/staff", "/refer"];
@@ -18,6 +43,7 @@ function DemoMenu({ tripOpen }: { tripOpen: boolean }) {
   const wrap = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
   const menuId = useId();
+  const current = audienceFor(pathname);
 
   // Close whenever the route changes.
   useEffect(() => setOpen(false), [pathname]);
@@ -35,7 +61,7 @@ function DemoMenu({ tripOpen }: { tripOpen: boolean }) {
     };
     document.addEventListener("pointerdown", onPointer);
     document.addEventListener("keydown", onKey);
-    wrap.current?.querySelector<HTMLElement>("a")?.focus();
+    wrap.current?.querySelector<HTMLElement>("nav a")?.focus();
     return () => {
       document.removeEventListener("pointerdown", onPointer);
       document.removeEventListener("keydown", onKey);
@@ -61,33 +87,73 @@ function DemoMenu({ tripOpen }: { tripOpen: boolean }) {
       {open && (
         <nav
           id={menuId}
-          aria-label="View as"
-          className="pop absolute right-0 z-50 mt-2 w-56 rounded-2xl bg-white p-2 text-cocoa-900 shadow-[var(--shadow-float)]"
+          aria-label="Demo views and pages"
+          className="pop absolute right-0 z-50 mt-2 w-64 rounded-2xl bg-white p-2 text-cocoa-900 shadow-[var(--shadow-float)]"
         >
-          <p className="px-3 pt-1 pb-2 text-sm text-cocoa-500">View as</p>
-          <ul>
-            {VIEWS.map((v) => {
-              const active = v.match.includes(pathname);
-              return (
-                <li key={v.label}>
-                  <NavLink
-                    to={v.label === "Traveller" && tripOpen ? "/trip" : v.to}
-                    aria-current={active ? "page" : undefined}
-                    className={`flex min-h-11 items-center justify-between rounded-xl px-3 font-semibold ${
-                      active ? "bg-cream-100 text-cocoa-950" : "hover:bg-cream-100"
-                    }`}
-                    data-testid={`view-${v.label.toLowerCase()}`}
-                  >
-                    {v.label}
-                    {active && <span className="h-2 w-2 rounded-full bg-clay-500" aria-hidden />}
-                  </NavLink>
-                </li>
-              );
-            })}
-          </ul>
+          <p className="px-3 pt-1 pb-1 text-sm text-cocoa-500">View as</p>
+          {AUDIENCES.map((a) => {
+            const active = current?.key === a.key;
+            return (
+              <div key={a.key} className="border-b border-cream-200 py-1 last:border-0">
+                <Link
+                  to={a.key === "traveller" && tripOpen ? "/trip" : a.tabs[0].to}
+                  aria-current={active ? "true" : undefined}
+                  className={`flex min-h-11 items-center justify-between rounded-xl px-3 font-semibold ${
+                    active ? "bg-cream-100 text-cocoa-950" : "hover:bg-cream-100"
+                  }`}
+                  data-testid={`view-${a.key}`}
+                >
+                  {a.label}
+                  {active && <span className="h-2 w-2 rounded-full bg-clay-500" aria-hidden />}
+                </Link>
+                <ul className="flex flex-wrap gap-x-1 px-2 pb-1">
+                  {a.tabs.map((t) => (
+                    <li key={t.to}>
+                      <NavLink
+                        to={t.to}
+                        end
+                        className={({ isActive }) =>
+                          `inline-flex min-h-9 items-center rounded-lg px-2 text-sm ${
+                            isActive ? "font-semibold text-clay-700" : "text-cocoa-700 hover:bg-cream-100"
+                          }`
+                        }
+                      >
+                        {t.label}
+                      </NavLink>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
         </nav>
       )}
     </div>
+  );
+}
+
+function AudienceTabs({ audience }: { audience: Audience }) {
+  return (
+    <nav aria-label={`${audience.label} pages`} className="border-t border-cream-100/10">
+      <ul className="mx-auto flex h-10 max-w-3xl items-center gap-1 overflow-x-auto px-3" data-testid="audience-tabs">
+        {audience.tabs.map((t) => (
+          <li key={t.to} className="shrink-0">
+            <NavLink
+              to={t.to}
+              end
+              className={({ isActive }) =>
+                `inline-flex min-h-8 items-center rounded-full px-3 text-sm font-semibold ${
+                  isActive ? "bg-cream-100 text-cocoa-950" : "text-cream-200 hover:bg-cream-100/10 hover:text-cream-50"
+                }`
+              }
+              data-testid={`tab-${t.to.slice(1) || "home"}`}
+            >
+              {t.label}
+            </NavLink>
+          </li>
+        ))}
+      </ul>
+    </nav>
   );
 }
 
@@ -97,6 +163,8 @@ export function Layout() {
   const hasDecided = useStore((s) => s.session.interestedAt !== null);
   const trip = useStore(currentTrip);
   const hasReferred = useStore((s) => referralForTrip(s, s.session.tripId ?? undefined) !== undefined);
+  const audience = audienceFor(pathname);
+  const isTraveller = audience?.key === "traveller";
 
   const visited = trip?.status === "visited";
   const completed = hasReferred ? 4 : visited ? 3 : trip ? 2 : hasDecided ? 1 : hasDiscovered ? 0 : -1;
@@ -104,7 +172,7 @@ export function Layout() {
     pathname === "/venue"
       ? 1
       : pathname === "/trip"
-        ? visited ? 3 : 2
+        ? trip && trip.status !== "saved" ? 3 : 2
         : pathname === "/staff"
           ? 3
           : pathname === "/refer"
@@ -130,6 +198,7 @@ export function Layout() {
             <DemoMenu tripOpen={trip !== undefined} />
           </div>
         </div>
+        {audience && <AudienceTabs audience={audience} />}
         {STEPPER_PAGES.includes(pathname) && <JourneyProgress current={current} completed={completed} />}
       </header>
 
@@ -137,7 +206,7 @@ export function Layout() {
         <Outlet />
       </main>
 
-      <footer className="border-t border-cream-200 bg-cream-100">
+      <footer className={`border-t border-cream-200 bg-cream-100 ${isTraveller ? "pb-20" : ""}`}>
         <div className="mx-auto flex max-w-3xl flex-col gap-3 px-4 py-6 text-sm text-cocoa-700 sm:flex-row sm:items-center sm:justify-between">
           <p>
             Hackathon prototype. All people, stories and sources are <strong>sample data</strong>. Venue details
@@ -152,6 +221,8 @@ export function Layout() {
           </button>
         </div>
       </footer>
+
+      {isTraveller && <Assistant />}
     </div>
   );
 }

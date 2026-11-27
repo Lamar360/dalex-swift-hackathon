@@ -30,7 +30,9 @@ Try a referral link: `http://localhost:5173/?src=ldn-ghana-circle`
 - `src/lib/types.ts`: data model (Source, Trip, Visit, Story, Referral, JourneyEvent, Session)
 - `src/lib/seed.ts`: sample seed data
 - `src/lib/store.ts`: the only persistence layer (typed state in localStorage, `useStore` hook, actions, selectors)
-- `src/screens/`: Discover (`/`), Venue (`/venue`), Trip (`/trip`), Refer (`/refer`), Staff (`/staff`), Owner dashboard (`/dashboard`)
+- `src/data/venue.ts`: every venue detail (placeholders until De Klinic confirms them)
+- `src/screens/`: Discover (`/`), Venue (`/venue`), Trip (`/trip`), Refer (`/refer`), Staff (`/staff`), Owner dashboard (`/dashboard`), Guest journeys (`/guests`)
+- `src/components/Assistant.tsx`: rule-based demo assistant (not AI, no network calls)
 - `src/components/`: shared layout, view switcher and journey progress bar
 
 ## Demo script
@@ -41,8 +43,27 @@ Try a referral link: `http://localhost:5173/?src=ldn-ghana-circle`
 4. Open the link: "You were referred by …".
 5. **View as: Owner** → the funnel, sources, December arrivals and guest timeline have updated.
 
-Every step is written to an event log in the store (`discovered`, `saved`, `visit_confirmed`, `referred`);
+Every step is written to an event log in the store (`discovered`, `saved`, `checked_in`, `visit_confirmed`, `referred`, `question_asked`);
 timelines and dashboard numbers are derived from it.
+
+## Venue details
+
+Every venue detail (address, map link, opening hours, menu, prices, delivery coverage, group bookings, events and the
+WhatsApp number) lives in `src/data/venue.ts`. `null` means "To be confirmed" and the app shows a placeholder. Replace
+a value there and the venue page, the arrival section on `/trip` and the demo assistant all update. The WhatsApp number
+`233000000000` is a **sample** and must be replaced before real use.
+
+## Deploy to Vercel
+
+Not deployed yet. The repo is ready for it:
+
+1. `npm run build` writes the static site to `dist/`.
+2. `vercel.json` sets the build command and output directory, and rewrites every path to `/index.html` so deep
+   links like `/trip`, `/staff` or `/?src=ldn-ghana-circle` load the app instead of a 404.
+3. In Vercel: **Add New → Project**, import this GitHub repo, keep the detected settings and deploy (or run
+   `npx vercel` then `npx vercel --prod` from the repo root).
+
+Data still lives in each visitor's browser (localStorage), so a deployed demo has no shared backend.
 
 ## Limits
 
