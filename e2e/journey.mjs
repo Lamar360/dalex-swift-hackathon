@@ -66,6 +66,8 @@ async function dashboardCounts() {
 // Fresh seed.
 await page.goto(`${base}/staff`);
 await page.evaluate(() => localStorage.clear());
+// Run the main journey in December mode (the season this demo plans for); season checks come later.
+await page.evaluate(() => localStorage.setItem("deklinic.season", "december"));
 
 // 0. Dashboard baseline from seed data.
 const before = await dashboardCounts();
@@ -456,6 +458,46 @@ for (const src of NEW_SOURCES) {
   const r = await rowCounts(src.id);
   check(r.disc === src.disc + 1, `Sources table counts the new ${src.id} discovery (${r.disc})`);
 }
+
+// Season switch (390px): December vs Not December, persisted, no reload needed.
+const pickSeason = async (mode) => {
+  await page.getByTestId("demo-menu").click();
+  await page.getByTestId(`season-${mode}`).locator("..").click();
+  await page.keyboard.press("Escape");
+};
+await page.goto(`${base}/`);
+await page.getByTestId("cta-venue").waitFor();
+check((await page.getByTestId("xmas-banner").count()) === 1, "December: Christmas banner on Home");
+check((await text("xmas-banner")).includes("Akwaaba, Happy Christmas! Planning a December trip to Ghana?"), "December: banner wording");
+const bannerBox = await page.getByTestId("xmas-banner").boundingBox();
+const headerBottom390 = await page.locator("header").evaluate((h) => h.getBoundingClientRect().bottom);
+check(bannerBox.y >= headerBottom390, "December: banner sits below the header, not over it");
+const heroTop = (await page.locator(".hero").boundingBox()).y;
+check(bannerBox.y + bannerBox.height <= heroTop, "December: banner does not overlap the hero");
+await checkHomeAboveFold("390x844 December mode with banner");
+await pickSeason("not-december");
+check((await page.getByTestId("xmas-banner").count()) === 0, "Not December: banner hidden immediately (no reload)");
+check((await page.locator("#hero-heading + p").innerText()).startsWith("Coming home to Ghana?"), "Not December: neutral home copy");
+await page.reload();
+await page.getByTestId("cta-venue").waitFor();
+check((await page.getByTestId("xmas-banner").count()) === 0, "Not December persists on reload");
+await page.goto(`${base}/dashboard`);
+await page.getByTestId("dashboard-heading").waitFor();
+check((await text("dashboard-heading")) === "Where guests come from", "Not December: 'Where guests come from'");
+check((await text("arrivals-label")) === "Upcoming arrivals" && (await text("guests-label")) === "Expected arrivals", "Not December: 'Upcoming arrivals' / 'Expected arrivals'");
+check(!(await page.locator("main").innerText()).includes("December guests"), "Not December: no December labels on the dashboard");
+check((await text("dec-trips")) === "6" || Number(await text("dec-trips")) > 0, "numbers unchanged by the season switch");
+await page.getByTestId("demo-menu").click();
+check((await text("season-current")).startsWith("Season: Not December"), "Demo menu shows the current season mode");
+await page.keyboard.press("Escape");
+await pickSeason("december");
+check((await text("dashboard-heading")) === "Where December guests come from", "December: dashboard heading switches back without reload");
+await page.reload();
+await page.getByTestId("dashboard-heading").waitFor();
+check((await text("guests-label")) === "December guests", "December persists on reload");
+await page.goto(`${base}/`);
+await page.getByTestId("xmas-dismiss").click();
+check((await page.getByTestId("xmas-banner").count()) === 0, "Christmas banner can be dismissed");
 
 // Laptop: homepage above the fold at 1366x768, with and without ?src.
 await page.setViewportSize({ width: 1366, height: 768 });

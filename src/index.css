@@ -105,6 +105,48 @@
   .assistant-panel { right: 1rem; width: 18rem; }
 }
 
+/* December mode: tiny CSS-only Christmas trees with a softly twinkling star. */
+.xmas-tree {
+  position: relative;
+  width: 14px;
+  height: 18px;
+  background: var(--color-palm-600);
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+.xmas-tree--big { width: 18px; height: 24px; }
+.xmas-tree::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border-radius: 9999px;
+  background: var(--color-gold-400);
+}
+.xmas-trees { position: relative; }
+.xmas-trees::before {
+  content: "";
+  position: absolute;
+  top: -3px;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  margin-left: -3px;
+  border-radius: 9999px;
+  background: var(--color-gold-400);
+  box-shadow: 0 0 6px var(--color-gold-400);
+  animation: twinkle 1.6s ease-in-out infinite alternate;
+}
+@keyframes twinkle {
+  from { opacity: 0.45; }
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .xmas-trees::before { animation: none; }
+}
+
 /* ---------- Depth ---------- */
 
 /* Display cards lift and tilt slightly toward the viewer on hover/focus. */

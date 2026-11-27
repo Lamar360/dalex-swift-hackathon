@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router";
+import { setSeasonMode, useSeason, type SeasonMode } from "../lib/season";
 import { currentTrip, referralForTrip, resetDemo, useStore } from "../lib/store";
 import { Assistant } from "./Assistant";
 import { JourneyProgress } from "./JourneyProgress";
@@ -126,9 +127,49 @@ function DemoMenu({ tripOpen }: { tripOpen: boolean }) {
               </div>
             );
           })}
+          <SeasonControl />
         </nav>
       )}
     </div>
+  );
+}
+
+const SEASONS: { value: SeasonMode; label: string }[] = [
+  { value: "auto", label: "Auto" },
+  { value: "december", label: "December" },
+  { value: "not-december", label: "Not December" },
+];
+
+/** Demo-only switch for the seasonal wording and greeting. */
+function SeasonControl() {
+  const { mode, december } = useSeason();
+  return (
+    <fieldset className="border-t border-cream-200 px-3 pt-2 pb-1">
+      <legend className="sr-only">Season</legend>
+      <p className="pb-1.5 text-sm text-cocoa-500" data-testid="season-current" aria-live="polite">
+        Season: {SEASONS.find((s) => s.value === mode)!.label}
+        {mode === "auto" && ` (${december ? "December" : "not December"} today)`}
+      </p>
+      <div className="grid grid-cols-3 gap-1 rounded-xl bg-cream-100 p-1">
+        {SEASONS.map((s) => (
+          <label
+            key={s.value}
+            className="flex min-h-11 cursor-pointer items-center justify-center rounded-lg px-1 text-center text-xs leading-tight font-semibold text-cocoa-700 has-[:checked]:bg-white has-[:checked]:text-cocoa-950 has-[:checked]:shadow-[var(--shadow-card)] has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-gold-500"
+          >
+            <input
+              type="radio"
+              name="season"
+              value={s.value}
+              checked={mode === s.value}
+              onChange={() => setSeasonMode(s.value)}
+              className="sr-only"
+              data-testid={`season-${s.value}`}
+            />
+            {s.label}
+          </label>
+        ))}
+      </div>
+    </fieldset>
   );
 }
 

@@ -1,5 +1,7 @@
 import { useEffect } from "react";
 import { Link, useSearchParams } from "react-router";
+import { ChristmasBanner } from "../components/ChristmasBanner";
+import { useSeason } from "../lib/season";
 import { findSource, recordDiscovery, useStore } from "../lib/store";
 import type { GuestType, SourceType } from "../lib/types";
 
@@ -43,10 +45,12 @@ export function Discover() {
   const session = useStore((s) => s.session);
   const source = useStore((s) => findSource(s, s.session.sourceId));
   const sources = useStore((s) => s.sources);
+  const { december } = useSeason();
   const recorded = session.discoveredAt !== null && (rawSrc === null || session.rawSrc === rawSrc);
 
   return (
     <div className="rise space-y-10">
+      {december && <ChristmasBanner />}
       <section className="hero px-5 py-7 sm:px-10 sm:py-10" aria-labelledby="hero-heading">
         <div className="hero-deco" aria-hidden>
           <span className="d1" />
@@ -103,7 +107,7 @@ export function Discover() {
           Your first night back in Accra starts here.
         </h1>
         <p className="mt-4 max-w-md text-lg text-cocoa-700">
-          Coming home for December? Save De Klinic to your Ghana itinerary and get an arrival code for the door.
+          {december ? "Coming home for December?" : "Coming home to Ghana?"} Save De Klinic to your Ghana itinerary and get an arrival code for the door.
         </p>
         <Link to="/venue" className="btn-primary mt-7 text-lg" data-testid="cta-venue">
           See De Klinic

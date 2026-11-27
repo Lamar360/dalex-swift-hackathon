@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
 import { VENUE, whatsappLink } from "../data/venue";
+import { useSeason } from "../lib/season";
 import { answerQuestion, findSource, getState, REFERRAL_CHANNELS, tripTimeline, useStore } from "../lib/store";
 import type { EventType, JourneyEvent } from "../lib/types";
 import { GUEST_TYPES, guestTypeLabel, SOURCE_TYPE_ICON, SOURCE_TYPE_LABEL } from "./Discover";
@@ -18,6 +19,7 @@ export function Dashboard() {
   const trips = useStore((s) => s.trips);
   const sources = useStore((s) => s.sources);
   const referrals = useStore((s) => s.referrals);
+  const { december } = useSeason();
 
   const stats = useMemo(() => {
     const discoveredVisitors = new Map<string, string | null>();
@@ -64,23 +66,29 @@ export function Dashboard() {
         <p className="text-sm font-bold tracking-wide text-clay-700 uppercase" data-testid="owner-label">
           Owner view · sample data
         </p>
-        <h1 className="text-4xl font-bold">Where December guests come from</h1>
+        <h1 className="text-4xl font-bold" data-testid="dashboard-heading">
+          {december ? "Where December guests come from" : "Where guests come from"}
+        </h1>
       </section>
 
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <div className="card tilt bg-cocoa-900 text-cream-100">
-          <p className="text-sm font-semibold text-sand-300">December arrivals</p>
+          <p className="text-sm font-semibold text-sand-300" data-testid="arrivals-label">
+            {december ? "December arrivals" : "Upcoming arrivals"}
+          </p>
           <p className="font-display text-4xl font-bold text-gold-400" data-testid="dec-trips">
             {stats.decTrips}
           </p>
-          <p className="text-sm text-cream-200">saved trips arriving in December</p>
+          <p className="text-sm text-cream-200">{december ? "saved trips arriving in December" : "saved trips arriving soon"}</p>
         </div>
         <div className="card tilt bg-cocoa-900 text-cream-100">
-          <p className="text-sm font-semibold text-sand-300">December guests</p>
+          <p className="text-sm font-semibold text-sand-300" data-testid="guests-label">
+            {december ? "December guests" : "Expected arrivals"}
+          </p>
           <p className="font-display text-4xl font-bold text-gold-400" data-testid="dec-guests">
             {stats.decGuests}
           </p>
-          <p className="text-sm text-cream-200">people on those December trips</p>
+          <p className="text-sm text-cream-200">{december ? "people on those December trips" : "guests on those trips"}</p>
         </div>
         <div className="card tilt col-span-2 flex items-center justify-between gap-4 sm:col-span-1 sm:block">
           <p className="text-sm font-semibold text-cocoa-500">Pending check-ins</p>
@@ -175,7 +183,7 @@ export function Dashboard() {
         </h2>
         <p className="-mt-2 text-sm text-cocoa-500" data-testid="guest-type-scope">
           All saved and visited trips ({stats.savedCount} trips, {stats.guestTypes.reduce((n, g) => n + g.guests, 0)} guests),
-          not just December.
+          {december ? "not just December." : "not just upcoming trips."}
         </p>
         <ul className="space-y-3" data-testid="guest-type-breakdown">
           {stats.guestTypes.map((g) => (
