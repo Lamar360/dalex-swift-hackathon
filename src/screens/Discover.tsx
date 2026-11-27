@@ -1,21 +1,36 @@
 import { useEffect } from "react";
 import { Link, useSearchParams } from "react-router";
 import { findSource, recordDiscovery, useStore } from "../lib/store";
-import type { SourceType } from "../lib/types";
+import type { GuestType, SourceType } from "../lib/types";
 
 export const SOURCE_TYPE_LABEL: Record<SourceType, string> = {
-  community: "Diaspora community",
+  search: "Web search",
   "ai-travel": "AI travel answer",
+  "curated-itinerary": "Curated itinerary",
+  community: "Diaspora community",
   curator: "Travel curator",
+  host: "Local host",
   referral: "Friend who visited",
 };
 
 export const SOURCE_TYPE_ICON: Record<SourceType, string> = {
-  community: "👥",
+  search: "🔍",
   "ai-travel": "✦",
+  "curated-itinerary": "🗺️",
+  community: "👥",
   curator: "🧭",
+  host: "🏠",
   referral: "🤝",
 };
+
+export const GUEST_TYPES: { value: GuestType; label: string }[] = [
+  { value: "solo", label: "Solo" },
+  { value: "friends", label: "Friends" },
+  { value: "family", label: "Family" },
+  { value: "group", label: "Group" },
+];
+
+export const guestTypeLabel = (t: GuestType | undefined) => GUEST_TYPES.find((g) => g.value === t)?.label ?? "Not given";
 
 export function Discover() {
   const [params] = useSearchParams();

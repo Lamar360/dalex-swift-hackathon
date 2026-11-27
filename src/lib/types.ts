@@ -1,4 +1,13 @@
-export type SourceType = "community" | "ai-travel" | "curator" | "referral";
+export type SourceType =
+  | "search"
+  | "ai-travel"
+  | "curated-itinerary"
+  | "community"
+  | "curator"
+  | "host"
+  | "referral";
+
+export type GuestType = "solo" | "friends" | "family" | "group";
 
 export interface Source {
   id: string;
@@ -22,6 +31,7 @@ export interface Trip {
   /** ISO date (YYYY-MM-DD) */
   travelTo: string;
   groupSize: number;
+  guestType: GuestType;
   sourceId: string | null;
   /** ISO timestamp */
   savedAt: string;

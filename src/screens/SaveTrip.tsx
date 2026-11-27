@@ -1,7 +1,8 @@
 import { useState, type FormEvent, type InputHTMLAttributes } from "react";
 import { Link } from "react-router";
 import { addStory, clearCurrentTrip, currentTrip, findSource, saveTrip, useStore } from "../lib/store";
-import type { Trip } from "../lib/types";
+import type { GuestType, Trip } from "../lib/types";
+import { GUEST_TYPES, guestTypeLabel } from "./Discover";
 
 const DEMO_FILL = {
   name: "Adwoa Asare (sample)",
@@ -9,9 +10,10 @@ const DEMO_FILL = {
   travelFrom: "2026-12-18",
   travelTo: "2027-01-03",
   groupSize: "4",
+  guestType: "family",
 };
 
-const EMPTY = { name: "", originCity: "", travelFrom: "", travelTo: "", groupSize: "2" };
+const EMPTY = { name: "", originCity: "", travelFrom: "", travelTo: "", groupSize: "2", guestType: "" };
 
 type FormValues = typeof EMPTY;
 type Errors = Partial<Record<keyof FormValues, string>>;
@@ -25,6 +27,7 @@ function validate(v: FormValues): Errors {
   if (v.travelFrom && v.travelTo && v.travelTo < v.travelFrom) e.travelTo = "Departure must be after arrival.";
   const n = Number(v.groupSize);
   if (!Number.isInteger(n) || n < 1 || n > 30) e.groupSize = "Group size must be between 1 and 30.";
+  if (!v.guestType) e.guestType = "Choose who’s coming.";
   return e;
 }
 
@@ -65,6 +68,7 @@ function TripForm() {
         travelFrom: values.travelFrom,
         travelTo: values.travelTo,
         groupSize: Number(values.groupSize),
+        guestType: values.guestType as GuestType,
       });
     }, 600);
   }
@@ -120,6 +124,34 @@ function TripForm() {
           {field("travelFrom", "Arriving in Ghana", { type: "date" })}
           {field("travelTo", "Leaving Ghana", { type: "date", min: values.travelFrom || undefined })}
         </div>
+        <fieldset aria-describedby={errors.guestType ? "e-guestType" : undefined}>
+          <legend className="field-label">Who’s coming?</legend>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" data-testid="guest-type">
+            {GUEST_TYPES.map((g, i) => (
+              <label
+                key={g.value}
+                className={`flex min-h-[3.25rem] cursor-pointer items-center justify-center rounded-xl border-2 px-3 font-semibold transition-colors has-[:checked]:border-clay-500 has-[:checked]:bg-clay-500 has-[:checked]:text-cream-50 has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-gold-500 ${errors.guestType ? "border-clay-600" : "border-sand-300"}`}
+              >
+                <input
+                  type="radio"
+                  name="guestType"
+                  id={i === 0 ? "f-guestType" : undefined}
+                  value={g.value}
+                  checked={values.guestType === g.value}
+                  onChange={() => update("guestType", g.value)}
+                  aria-invalid={errors.guestType ? true : undefined}
+                  className="sr-only"
+                />
+                {g.label}
+              </label>
+            ))}
+          </div>
+          {errors.guestType && (
+            <p id="e-guestType" className="mt-1.5 text-sm font-semibold text-clay-700">
+              {errors.guestType}
+            </p>
+          )}
+        </fieldset>
         {field("groupSize", "Group size", { type: "number", inputMode: "numeric", min: 1, max: 30 })}
         <button type="submit" className="btn-primary" disabled={saving} data-testid="submit-trip">
           {saving ? (
@@ -193,6 +225,7 @@ function Confirmation({ trip }: { trip: Trip }) {
             ["From", trip.originCity],
             ["Dates", `${formatDate(trip.travelFrom)} – ${formatDate(trip.travelTo)}`],
             ["Group size", String(trip.groupSize)],
+            ["Who’s coming", guestTypeLabel(trip.guestType)],
             ["Referred by", source?.label.replace(/^Referred by /, "") ?? "No referral (direct)"],
             [
               "Status",

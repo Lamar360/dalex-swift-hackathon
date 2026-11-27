@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { findSource, getState, tripTimeline, useStore } from "../lib/store";
 import type { EventType, JourneyEvent } from "../lib/types";
-import { SOURCE_TYPE_ICON, SOURCE_TYPE_LABEL } from "./Discover";
+import { GUEST_TYPES, guestTypeLabel, SOURCE_TYPE_ICON, SOURCE_TYPE_LABEL } from "./Discover";
 import { formatDate } from "./SaveTrip";
 import { StatusPill } from "./Staff";
 
@@ -44,6 +44,11 @@ export function Dashboard() {
       rows: rows.filter((r) => r.discovered + r.saved > 0),
       decTrips: december.length,
       decGuests: december.reduce((n, t) => n + t.groupSize, 0),
+      guestTypes: GUEST_TYPES.map((g) => {
+        const ts = saved.filter((t) => t.guestType === g.value);
+        return { ...g, trips: ts.length, guests: ts.reduce((n, t) => n + t.groupSize, 0) };
+      }),
+      savedCount: saved.length,
     };
   }, [events, trips, sources, referrals]);
 
@@ -123,7 +128,11 @@ export function Dashboard() {
               {stats.rows.map((r) => {
                 const src = sources.find((s) => s.id === r.id);
                 return (
-                  <tr key={r.id ?? "direct"} className="border-b border-cream-200 last:border-0">
+                  <tr
+                    key={r.id ?? "direct"}
+                    className="border-b border-cream-200 last:border-0"
+                    data-testid={`source-row-${r.id ?? "direct"}`}
+                  >
                     <td className="py-2.5 pr-2">
                       <span className="font-semibold">{src ? src.label : "Direct / no link"}</span>
                       <span className="block text-xs text-cocoa-500">
@@ -141,6 +150,34 @@ export function Dashboard() {
           </table>
         </div>
         <p className="text-xs text-cocoa-500">Conv. = visited ÷ discovered. Counts are sample data.</p>
+      </section>
+
+      <section aria-labelledby="guest-type-heading" className="card space-y-4">
+        <h2 id="guest-type-heading" className="text-xl font-bold">
+          Who’s coming
+        </h2>
+        <ul className="space-y-3" data-testid="guest-type-breakdown">
+          {stats.guestTypes.map((g) => (
+            <li key={g.value}>
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="font-semibold">{g.label}</span>
+                <span className="text-sm text-cocoa-500">
+                  <strong className="text-xl text-cocoa-900" data-testid={`guest-type-${g.value}`}>
+                    {g.trips}
+                  </strong>{" "}
+                  {g.trips === 1 ? "trip" : "trips"}, {g.guests} {g.guests === 1 ? "guest" : "guests"}
+                </span>
+              </div>
+              <div className="mt-1 h-3 overflow-hidden rounded-full bg-cream-200" aria-hidden>
+                <div
+                  className="h-full rounded-full bg-gold-500"
+                  style={{ width: `${stats.savedCount ? Math.max(2, (g.trips / stats.savedCount) * 100) : 2}%` }}
+                />
+              </div>
+            </li>
+          ))}
+        </ul>
+        <p className="text-xs text-cocoa-500">Saved and visited trips, by what guests chose on the trip form. Sample data.</p>
       </section>
 
       <GuestTimeline />
@@ -208,7 +245,7 @@ function GuestTimeline() {
           <div className="flex flex-wrap items-center gap-2 text-sm text-cocoa-700">
             <StatusPill status={trip.status} />
             <span>
-              {trip.originCity} · {formatDate(trip.travelFrom)} – {formatDate(trip.travelTo)} · {trip.groupSize} guests
+              {trip.originCity} · {formatDate(trip.travelFrom)} – {formatDate(trip.travelTo)} · {trip.groupSize} guests ({guestTypeLabel(trip.guestType).toLowerCase()})
             </span>
           </div>
           <ol className="relative space-y-4 border-l-2 border-cream-200 pl-6" data-testid="timeline">

@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { createSeed, newId, STATE_VERSION } from "./seed";
-import type { AppState, EventType, JourneyEvent, Referral, Source, Trip } from "./types";
+import type { AppState, EventType, GuestType, JourneyEvent, Referral, Source, Trip } from "./types";
 
 /**
  * The app's only persistence layer: one typed state object in localStorage.
@@ -167,6 +167,7 @@ export interface SaveTripInput {
   travelFrom: string;
   travelTo: string;
   groupSize: number;
+  guestType: GuestType;
 }
 
 export function saveTrip(input: SaveTripInput): Trip {

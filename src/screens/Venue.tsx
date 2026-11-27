@@ -4,12 +4,18 @@ import { currentTrip, findSource, markInterested, useStore } from "../lib/store"
 const VENUE_DETAILS: { label: string; value?: string }[] = [
   { label: "Location", value: "Accra, Ghana" },
   { label: "Opening hours" },
-  { label: "Menu highlights" },
-  { label: "Price range" },
-  { label: "Delivery" },
-  { label: "December events" },
-  { label: "Group bookings" },
 ];
+
+/** Still to be confirmed with the owners: shown as placeholders, never guessed. */
+const OFFER_PLACEHOLDERS = ["Menu", "Prices", "Delivery coverage", "Group bookings", "Events"];
+
+function BriefTag({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="inline-flex items-center rounded-full bg-gold-400/25 px-3 py-1 text-sm font-semibold text-cocoa-900">
+      {children}
+    </span>
+  );
+}
 
 function Tbc() {
   return <span className="tbc">To be confirmed</span>;
@@ -83,6 +89,37 @@ export function Venue() {
             </div>
           ))}
         </dl>
+      </section>
+
+      <section aria-labelledby="offers-heading" className="space-y-3" data-testid="venue-offers">
+        <h2 id="offers-heading" className="text-2xl font-bold">
+          What De Klinic offers
+        </h2>
+        <div className="card space-y-2 border-l-8 border-clay-500">
+          <BriefTag>From the brief</BriefTag>
+          <p className="font-display text-xl font-bold text-cocoa-950">Local food and the pub experience</p>
+          <p className="text-cocoa-700">Specific dishes, drinks and prices are still being confirmed with the owners.</p>
+        </div>
+        <div className="card space-y-3 bg-cream-100 shadow-none" data-testid="story-to-confirm">
+          <BriefTag>From the brief · to be confirmed with De Klinic</BriefTag>
+          <h3 className="text-xl font-bold">A story worth confirming</h3>
+          <blockquote className="border-l-4 border-sand-300 pl-4 text-lg leading-relaxed">
+            Portia has publicly described serving meals bought by a supporter for five followers.
+          </blockquote>
+          <p className="text-sm text-cocoa-500">Not verified yet. It will only be shown as fact once De Klinic confirms it.</p>
+        </div>
+        <div className="card">
+          <dl className="divide-y divide-cream-200">
+            {OFFER_PLACEHOLDERS.map((label) => (
+              <div key={label} className="flex flex-wrap items-center justify-between gap-2 py-3 first:pt-0 last:pb-0">
+                <dt className="font-semibold">{label}</dt>
+                <dd>
+                  <Tbc />
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
       </section>
 
       <section aria-labelledby="stories-heading" className="space-y-3">

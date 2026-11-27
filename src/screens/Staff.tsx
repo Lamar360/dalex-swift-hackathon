@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { DEMO_ARRIVAL_CODE } from "../lib/seed";
 import { confirmVisit, findSource, findTripByCode, normaliseCode, useStore } from "../lib/store";
+import { guestTypeLabel } from "./Discover";
 import { formatDate } from "./SaveTrip";
 
 export function Staff() {
@@ -79,9 +80,12 @@ export function Staff() {
             </div>
             <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
               <Detail label="Dates" value={`${formatDate(trip.travelFrom)} – ${formatDate(trip.travelTo)}`} />
-              <Detail label="Group size" value={`${trip.groupSize} ${trip.groupSize === 1 ? "guest" : "guests"}`} />
               <Detail label="From" value={trip.originCity} />
-              <Detail label="Source" value={source?.label ?? "Direct (no referral)"} />
+              <Detail label="Group size" value={`${trip.groupSize} ${trip.groupSize === 1 ? "guest" : "guests"}`} />
+              <Detail label="Who’s coming" value={guestTypeLabel(trip.guestType)} testId="staff-guest-type" />
+              <div className="col-span-2">
+                <Detail label="Source" value={source?.label ?? "Direct (no referral)"} />
+              </div>
             </dl>
 
             {trip.status === "saved" && (
@@ -125,11 +129,13 @@ export function Staff() {
   );
 }
 
-function Detail({ label, value }: { label: string; value: string }) {
+function Detail({ label, value, testId }: { label: string; value: string; testId?: string }) {
   return (
     <div className="min-w-0">
       <dt className="text-sm font-semibold text-cocoa-500">{label}</dt>
-      <dd className="font-semibold break-words">{value}</dd>
+      <dd className="font-semibold break-words" data-testid={testId}>
+        {value}
+      </dd>
     </div>
   );
 }

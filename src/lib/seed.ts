@@ -4,7 +4,7 @@ import type { AppState, JourneyEvent, Trip } from "./types";
  * SAMPLE DATA ONLY. None of these people, groups or quotes are real.
  * Nothing here is a fact about De Klinic Restaurant & Pub.
  */
-export const STATE_VERSION = 2;
+export const STATE_VERSION = 3;
 
 export const DEMO_ARRIVAL_CODE = "DK-7HQ4";
 
@@ -25,6 +25,7 @@ const SEED_TRIPS: SeedTrip[] = [
     travelFrom: "2026-12-18",
     travelTo: "2027-01-03",
     groupSize: 4,
+    guestType: "family",
     sourceId: "ldn-ghana-circle",
     discoveredAt: "2026-11-19T21:05:00.000Z",
     savedAt: "2026-11-20T19:42:00.000Z",
@@ -37,6 +38,7 @@ const SEED_TRIPS: SeedTrip[] = [
     travelFrom: "2026-10-30",
     travelTo: "2026-11-14",
     groupSize: 3,
+    guestType: "friends",
     sourceId: "ldn-ghana-circle",
     discoveredAt: "2026-10-02T18:10:00.000Z",
     savedAt: "2026-10-03T08:30:00.000Z",
@@ -50,6 +52,7 @@ const SEED_TRIPS: SeedTrip[] = [
     travelFrom: "2026-11-06",
     travelTo: "2026-11-22",
     groupSize: 5,
+    guestType: "family",
     sourceId: "afrobeat-routes",
     discoveredAt: "2026-10-11T02:40:00.000Z",
     savedAt: "2026-10-11T03:05:00.000Z",
@@ -63,6 +66,7 @@ const SEED_TRIPS: SeedTrip[] = [
     travelFrom: "2026-12-20",
     travelTo: "2027-01-05",
     groupSize: 3,
+    guestType: "friends",
     sourceId: "ai-accra-guide",
     discoveredAt: "2026-11-12T23:15:00.000Z",
     savedAt: "2026-11-12T23:31:00.000Z",
@@ -75,6 +79,7 @@ const SEED_TRIPS: SeedTrip[] = [
     travelFrom: "2026-12-15",
     travelTo: "2026-12-29",
     groupSize: 2,
+    guestType: "friends",
     sourceId: "afrobeat-routes",
     discoveredAt: "2026-11-15T14:00:00.000Z",
     savedAt: "2026-11-16T10:12:00.000Z",
@@ -87,10 +92,51 @@ const SEED_TRIPS: SeedTrip[] = [
     travelFrom: "2026-12-22",
     travelTo: "2027-01-02",
     groupSize: 6,
+    guestType: "group",
     sourceId: "ref-trip-s2",
     discoveredAt: "2026-11-18T17:45:00.000Z",
     savedAt: "2026-11-18T18:02:00.000Z",
     arrivalCode: "DK-F6GH",
+  },
+  {
+    id: "trip-s7",
+    name: "Nana Ofori (sample)",
+    originCity: "Washington DC, USA",
+    travelFrom: "2026-12-21",
+    travelTo: "2027-01-06",
+    groupSize: 1,
+    guestType: "solo",
+    sourceId: "ghana-travel-search",
+    discoveredAt: "2026-11-13T15:20:00.000Z",
+    savedAt: "2026-11-14T09:05:00.000Z",
+    arrivalCode: "DK-N4QS",
+  },
+  {
+    id: "trip-s8",
+    name: "Esi Quaye (sample)",
+    originCity: "Amsterdam, Netherlands",
+    travelFrom: "2026-12-17",
+    travelTo: "2026-12-31",
+    groupSize: 5,
+    guestType: "family",
+    sourceId: "dec-accra-itinerary",
+    discoveredAt: "2026-11-16T07:50:00.000Z",
+    savedAt: "2026-11-16T08:14:00.000Z",
+    arrivalCode: "DK-E2XC",
+  },
+  {
+    id: "trip-s9",
+    name: "Kojo Amponsah (sample)",
+    originCity: "Berlin, Germany",
+    travelFrom: "2026-11-03",
+    travelTo: "2026-11-17",
+    groupSize: 3,
+    guestType: "friends",
+    sourceId: "accra-host",
+    discoveredAt: "2026-11-04T12:30:00.000Z",
+    savedAt: "2026-11-04T12:41:00.000Z",
+    visitedAt: "2026-11-07T21:10:00.000Z",
+    arrivalCode: "DK-J7PD",
   },
 ];
 
@@ -103,6 +149,10 @@ const SEED_DISCOVERIES: { sourceId: string | null; at: string }[] = [
   { sourceId: "ldn-ghana-circle", at: "2026-11-22T19:10:00.000Z" },
   { sourceId: "afrobeat-routes", at: "2026-11-19T13:40:00.000Z" },
   { sourceId: "ref-trip-s2", at: "2026-11-20T08:25:00.000Z" },
+  { sourceId: "ghana-travel-search", at: "2026-11-18T10:15:00.000Z" },
+  { sourceId: "ghana-travel-search", at: "2026-11-21T22:40:00.000Z" },
+  { sourceId: "dec-accra-itinerary", at: "2026-11-19T06:55:00.000Z" },
+  { sourceId: "accra-host", at: "2026-11-20T18:30:00.000Z" },
   { sourceId: null, at: "2026-11-23T12:00:00.000Z" },
 ];
 
@@ -131,6 +181,7 @@ export function createSeed(): AppState {
   return {
     version: STATE_VERSION,
     sources: [
+      { id: "ghana-travel-search", label: "Ghana travel search (sample)", type: "search", country: "Worldwide" },
       { id: "ldn-ghana-circle", label: "London Ghanaian Diaspora Circle", type: "community", country: "United Kingdom" },
       {
         id: "ai-accra-guide",
@@ -138,7 +189,14 @@ export function createSeed(): AppState {
         type: "ai-travel",
         country: "Worldwide",
       },
+      {
+        id: "dec-accra-itinerary",
+        label: "December in Accra itinerary (sample)",
+        type: "curated-itinerary",
+        country: "Worldwide",
+      },
       { id: "afrobeat-routes", label: "Afrobeat Routes travel curator", type: "curator", country: "United States" },
+      { id: "accra-host", label: "Host in Accra (sample)", type: "host", country: "Ghana" },
       {
         id: "ref-trip-s2",
         label: "Referred by Kwame Boateng (sample)",
@@ -151,6 +209,7 @@ export function createSeed(): AppState {
     visits: [
       { tripId: "trip-s2", confirmedAt: "2026-11-01T19:20:00.000Z", confirmedBy: "De Klinic staff (demo)" },
       { tripId: "trip-s3", confirmedAt: "2026-11-08T20:15:00.000Z", confirmedBy: "De Klinic staff (demo)" },
+      { tripId: "trip-s9", confirmedAt: "2026-11-07T21:10:00.000Z", confirmedBy: "De Klinic staff (demo)" },
     ],
     stories: [
       {
