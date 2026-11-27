@@ -3,6 +3,7 @@ import { DEMO_ARRIVAL_CODE } from "../lib/seed";
 import { confirmVisit, findSource, findTripByCode, normaliseCode, useStore } from "../lib/store";
 import { guestTypeLabel } from "./Discover";
 import type { TripStatus } from "../lib/types";
+import { CopyButton } from "../components/CopyButton";
 import { formatDate } from "./SaveTrip";
 
 export function Staff() {
@@ -74,7 +75,10 @@ export function Staff() {
           <div className="card tilt space-y-4" data-testid="staff-result">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
-                <p className="font-mono text-sm font-bold text-cocoa-500">{trip.arrivalCode}</p>
+                <p className="flex items-center gap-2 font-mono text-sm font-bold text-cocoa-500">
+                  {trip.arrivalCode}
+                  <CopyButton text={trip.arrivalCode} what="arrival code" testId="copy-staff-code" />
+                </p>
                 <h2 className="text-2xl font-bold">{trip.name}</h2>
               </div>
               <StatusPill status={trip.status} />

@@ -1,5 +1,6 @@
 import { useState, type FormEvent, type InputHTMLAttributes } from "react";
 import { Link } from "react-router";
+import { CopyButton } from "../components/CopyButton";
 import { VENUE, arrivalMessage, whatsappLink } from "../data/venue";
 import { addStory, checkIn, clearCurrentTrip, currentTrip, findSource, saveTrip, useStore } from "../lib/store";
 import type { GuestType, Trip } from "../lib/types";
@@ -201,6 +202,9 @@ function Confirmation({ trip }: { trip: Trip }) {
         >
           {trip.arrivalCode}
         </p>
+        {!visited && (
+          <CopyButton text={trip.arrivalCode} what="arrival code" tone="dark" testId="copy-arrival-code" className="mt-3" />
+        )}
         <p className="mt-3 text-cream-200">
           {visited ? "Used. Your visit has been confirmed by staff." : "Show this at De Klinic so staff can confirm your visit."}
         </p>
@@ -303,10 +307,13 @@ function ArrivalSection({ trip, pending }: { trip: Trip; pending: boolean }) {
           <a href={wa} target="_blank" rel="noreferrer" className="btn-secondary w-full" data-testid="arrival-whatsapp">
             Message De Klinic on WhatsApp
           </a>
-          <p className="mt-1.5 text-sm text-cocoa-500">
-            {VENUE.whatsapp.display}
-            {VENUE.whatsapp.isSample && ". Messages won’t reach De Klinic yet."} Your code is in the message.
-          </p>
+          <div className="mt-1.5 flex items-start gap-2">
+            <p className="flex-1 text-sm text-cocoa-500">
+              {VENUE.whatsapp.display}
+              {VENUE.whatsapp.isSample && ". Messages won’t reach De Klinic yet."} Your code is in the message.
+            </p>
+            <CopyButton text={`+${VENUE.whatsapp.number}`} what="WhatsApp number" testId="copy-whatsapp" />
+          </div>
         </div>
       </div>
 

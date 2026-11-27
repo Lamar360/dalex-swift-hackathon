@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router";
+import { CopyButton } from "../components/CopyButton";
 import { createReferral, currentTrip, REFERRAL_CHANNELS, referralFor, useStore } from "../lib/store";
 import type { ReferralChannel } from "../lib/types";
 
@@ -10,7 +11,6 @@ export function Refer() {
   const broughtIn = useStore((s) =>
     referral ? s.events.filter((e) => e.type === "discovered" && e.sourceId === referral.sourceId).length : 0,
   );
-  const [copied, setCopied] = useState<"idle" | "ok" | "fail">("idle");
 
   if (!trip || trip.status !== "visited") {
     return (
@@ -30,15 +30,6 @@ export function Refer() {
 
   const firstName = trip.name.split(" ")[0];
   const link = referral ? `${window.location.origin}/?src=${referral.sourceId}` : "";
-
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(link);
-      setCopied("ok");
-    } catch {
-      setCopied("fail");
-    }
-  }
 
   return (
     <div className="rise space-y-6">
@@ -64,10 +55,7 @@ export function Refer() {
                 name="channel"
                 value={c.value}
                 checked={channel === c.value}
-                onChange={() => {
-                  setChannel(c.value);
-                  setCopied("idle");
-                }}
+                onChange={() => setChannel(c.value)}
                 className="sr-only"
               />
               <span className="font-semibold">{c.label}</span>
@@ -101,11 +89,8 @@ export function Refer() {
               className="field font-mono text-sm"
               data-testid="share-link"
             />
-            <button type="button" className="btn-primary" onClick={copy} data-testid="copy-link">
-              {copied === "ok" ? "✓ Copied" : "Copy link"}
-            </button>
-            <p role="status" className="text-sm text-cocoa-500">
-              {copied === "fail" ? "Couldn’t copy automatically. Select the link above and copy it." : ""}
+            <CopyButton text={link} what="share link" testId="copy-link" />
+            <p className="text-sm text-cocoa-500">
               {broughtIn > 0 ? ` ${broughtIn} ${broughtIn === 1 ? "person has" : "people have"} opened your link.` : ""}
             </p>
           </section>

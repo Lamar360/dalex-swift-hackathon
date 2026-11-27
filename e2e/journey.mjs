@@ -249,6 +249,19 @@ await shot("3-trip-saved");
 await page.reload();
 check((await text("arrival-code")) === code, "code survives reload");
 
+// Copy buttons: arrival code + WhatsApp number on My trip.
+async function checkCopy(testId, expected, label) {
+  const btn = page.getByTestId(testId);
+  check((await btn.count()) === 1, `${label}: copy button exists`);
+  const box = await btn.boundingBox();
+  check(box.height >= 44 && box.width >= 44, `${label}: touch target ≥ 44px (${Math.round(box.width)}×${Math.round(box.height)})`);
+  await btn.click();
+  await btn.filter({ hasText: "Copied ✓" }).waitFor({ timeout: 2000 });
+  check((await page.evaluate(() => navigator.clipboard.readText())) === expected, `${label}: shows "Copied ✓" and copies ${expected}`);
+}
+await checkCopy("copy-arrival-code", code, "arrival code");
+await checkCopy("copy-whatsapp", "+233000000000", "WhatsApp number");
+
 // Arrival section (values from src/data/venue.ts).
 await page.getByTestId("arrival").waitFor();
 check((await text("arrival-address")).includes("Address to be confirmed"), "arrival: address shown as 'Address to be confirmed'");
@@ -310,6 +323,7 @@ check(
 );
 check((await text("staff-guest-type")) === "Friends", "staff sees guest type (Friends) next to group size");
 check((await text("staff-checkin")).startsWith("Yes"), "staff sees the guest checked in");
+await checkCopy("copy-staff-code", code, "staff arrival code");
 check((await text("status-pill")) === "Pending check-in", "staff sees Pending check-in status");
 await shot("4-staff");
 await page.getByTestId("staff-confirm").click();
@@ -357,7 +371,7 @@ const refEvent = await page.evaluate(() => {
 check(refEvent, "host referral is traceable in the event log");
 check((await text("share-preview")).includes("Adwoa visited De Klinic"), "share preview visible");
 await page.getByTestId("copy-link").click();
-await page.getByTestId("copy-link").filter({ hasText: "Copied" }).waitFor({ timeout: 3000 });
+await page.getByTestId("copy-link").filter({ hasText: "Copied ✓" }).waitFor({ timeout: 2000 });
 check(true, "copy-to-clipboard button confirms");
 check((await page.evaluate(() => navigator.clipboard.readText())) === link, "clipboard holds the link");
 await shot("6-refer");
