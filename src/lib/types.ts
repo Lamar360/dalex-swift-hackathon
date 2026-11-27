@@ -61,10 +61,23 @@ export interface Referral {
   fromTripId: string;
   /** The referral Source created for this guest's share link. */
   sourceId: string;
+  /** Who the guest is referring back through. Older referrals may not have one. */
+  channel?: ReferralChannel;
   createdAt: string;
 }
 
-export type EventType = "discovered" | "saved" | "checked_in" | "visit_confirmed" | "referred" | "question_asked";
+export type EventType =
+  | "discovered"
+  | "interested"
+  | "saved"
+  | "checked_in"
+  | "visit_confirmed"
+  | "referred"
+  | "question_asked"
+  | "question_answered";
+
+/** Where a guest chose to refer De Klinic back to. */
+export type ReferralChannel = "community" | "host" | "curator";
 
 /** A traveller question the demo assistant could not answer, passed on to De Klinic. */
 export interface Question {
@@ -72,7 +85,8 @@ export interface Question {
   text: string;
   createdAt: string;
   tripId?: string;
-  status: "open";
+  status: "open" | "answered";
+  answeredAt?: string;
 }
 
 /** Append-only log: every journey timeline is derived from this. */

@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { createSeed, newId, STATE_VERSION } from "./seed";
-import type { AppState, EventType, GuestType, JourneyEvent, Question, Referral, Source, Trip } from "./types";
+import type { AppState, EventType, GuestType, JourneyEvent, Question, Referral, ReferralChannel, Source, Trip } from "./types";
 
 /**
  * The app's only persistence layer: one typed state object in localStorage.
@@ -88,13 +88,13 @@ export function referralForTrip(s: AppState, tripId: string | undefined): Referr
 
 /** A guest's full journey: their own events plus guests their link brought in. */
 export function tripTimeline(s: AppState, trip: Trip): JourneyEvent[] {
-  const refSourceId = referralForTrip(s, trip.id)?.sourceId;
+  const refSourceIds = new Set(s.referrals.filter((r) => r.fromTripId === trip.id).map((r) => r.sourceId));
   return s.events
     .filter(
       (e) =>
         e.tripId === trip.id ||
-        (e.visitorId === trip.visitorId && e.type === "discovered") ||
-        (refSourceId !== undefined && e.sourceId === refSourceId && e.type === "discovered"),
+        (e.visitorId === trip.visitorId && (e.type === "discovered" || e.type === "interested")) ||
+        (e.sourceId !== null && refSourceIds.has(e.sourceId) && e.type === "discovered"),
     )
     .sort((a, b) => a.at.localeCompare(b.at));
 }
@@ -142,11 +142,17 @@ export function recordDiscovery(rawSrc: string | null) {
   });
 }
 
+/** "I'm interested": a lighter step than saving a trip. Logged so the owner can see it. */
 export function markInterested() {
-  setState((s) => ({
-    ...s,
-    session: { ...s.session, interestedAt: new Date().toISOString() },
-  }));
+  setState((s) => {
+    if (s.session.interestedAt) return s;
+    const at = new Date().toISOString();
+    return {
+      ...s,
+      session: { ...s.session, interestedAt: at },
+      events: [...s.events, event("interested", s, { at })],
+    };
+  });
 }
 
 // Unambiguous characters only (no 0/O, 1/I/L) so codes read well aloud.
@@ -242,21 +248,32 @@ export function addStory(tripId: string, text: string) {
   });
 }
 
-/** Creates (once) the referral Source + Referral for a visited trip. */
-export function createReferral(tripId: string): Referral | undefined {
-  const existing = referralForTrip(state, tripId);
+export const REFERRAL_CHANNELS: { value: ReferralChannel; label: string; hint: string }[] = [
+  { value: "community", label: "A diaspora community", hint: "A group chat, association or church group back home" },
+  { value: "host", label: "A host in Accra", hint: "Someone hosting visitors in Accra" },
+  { value: "curator", label: "A travel curator", hint: "A travel planner, blogger or itinerary maker" },
+];
+
+export function referralFor(s: AppState, tripId: string | undefined, channel: ReferralChannel): Referral | undefined {
+  return tripId ? s.referrals.find((r) => r.fromTripId === tripId && r.channel === channel) : undefined;
+}
+
+/** Creates (once per channel) the referral Source + Referral for a visited trip. */
+export function createReferral(tripId: string, channel: ReferralChannel): Referral | undefined {
+  const existing = referralFor(state, tripId, channel);
   if (existing) return existing;
   const trip = state.trips.find((t) => t.id === tripId);
   if (!trip || trip.status !== "visited") return undefined;
-  const sourceId = `ref-${trip.id}`;
-  const referral: Referral = { id: newId("ref"), fromTripId: trip.id, sourceId, createdAt: new Date().toISOString() };
+  const channelLabel = REFERRAL_CHANNELS.find((c) => c.value === channel)!.label.toLowerCase();
+  const sourceId = `ref-${trip.id}-${channel}`;
+  const referral: Referral = { id: newId("ref"), fromTripId: trip.id, sourceId, channel, createdAt: new Date().toISOString() };
   setState((s) => ({
     ...s,
     sources: [
       ...s.sources,
       {
         id: sourceId,
-        label: `Referred by ${trip.name}`,
+        label: `Referred by ${trip.name} via ${channelLabel}`,
         type: "referral",
         country: trip.originCity,
         referrerTripId: trip.id,
@@ -269,6 +286,23 @@ export function createReferral(tripId: string): Referral | undefined {
     ],
   }));
   return referral;
+}
+
+/** Owner marks a traveller question as answered. */
+export function answerQuestion(id: string) {
+  setState((s) => {
+    const q = s.questions.find((x) => x.id === id);
+    if (!q || q.status !== "open") return s;
+    const at = new Date().toISOString();
+    return {
+      ...s,
+      questions: s.questions.map((x) => (x.id === id ? { ...x, status: "answered", answeredAt: at } : x)),
+      events: [
+        ...s.events,
+        { id: newId("evt"), type: "question_answered", at, visitorId: "owner", tripId: q.tripId ?? null, sourceId: null },
+      ],
+    };
+  });
 }
 
 /** Stores a question the demo assistant could not answer, for De Klinic to pick up. */

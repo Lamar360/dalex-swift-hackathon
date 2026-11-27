@@ -86,6 +86,16 @@ check((await page.getByTestId("question").count()) === 3, "questions panel lists
 check((await text("questions-panel")).includes("(sample question)"), "seeded questions are labelled sample");
 check((await text("pending-checkins")) === "0", "seed has 0 pending check-ins");
 const gtBefore = await guestTypes();
+check((await page.locator(".card", { has: page.getByTestId("dec-guests") }).innerText()).includes("December guests"), "top guest count labelled December");
+check(
+  (await text("guest-type-scope")).includes("All saved and visited trips (9 trips, 32 guests)") &&
+    (await text("guest-type-scope")).includes("not just December"),
+  "Who's coming labelled 'All saved and visited trips', not December",
+);
+check((await text("interested-count")) === "2", "dashboard shows 2 seeded 'I'm interested' visitors");
+// Item 2: badge stays on one line on a phone.
+const badge = await page.getByTestId("questions-count").boundingBox();
+check(badge.height < 32, `"3 open" badge does not wrap at 390px (height ${badge.height})`);
 check(
   gtBefore.solo === 1 && gtBefore.friends === 4 && gtBefore.family === 3 && gtBefore.group === 1,
   `seed guest-type breakdown 1/4/3/1 (got ${JSON.stringify(gtBefore)})`,
@@ -225,6 +235,11 @@ const mid = await dashboardCounts();
 check(mid.discovered === 22 && mid.saved === 10, `dashboard counts the new discovery + save (got ${JSON.stringify(mid)})`);
 check(mid.decTrips === 7 && mid.decGuests === 25, "new December trip adds to expected arrivals (7 trips, 25 guests)");
 check((await guestTypes()).friends === 5, "guest-type breakdown counts the new Friends trip");
+check((await text("interested-count")) === "3", "'I'm interested' tap reaches the owner dashboard (2 → 3)");
+check(
+  await page.evaluate(() => JSON.parse(localStorage.getItem("deklinic.journey.v1")).events.some((e) => e.type === "interested" && !e.visitorId.startsWith("visitor-browse"))),
+  "'I'm interested' logged as an event",
+);
 check((await text("pending-checkins")) === "1", "dashboard counts 1 pending check-in");
 check((await text("questions-count")) === "4 open", "unknown assistant question reaches the dashboard (4 open)");
 check((await text("questions-panel")).includes(UNKNOWN_Q), "questions panel lists the new question");
@@ -286,9 +301,21 @@ check(firstStory.includes("Verified visit") && firstStory.includes("Lovely eveni
 
 // 6. Refer.
 await page.goto(`${base}/refer`);
+const channels = await page.getByTestId("referral-channel").innerText();
+check(
+  ["A diaspora community", "A host in Accra", "A travel curator"].every((c) => channels.includes(c)),
+  "refer offers community, host and travel curator",
+);
+await page.getByTestId("referral-channel").getByText("A host in Accra").click();
 await page.getByTestId("create-referral").click();
 const link = await page.getByTestId("share-link").inputValue();
-check(/\?src=ref-trip-[a-z0-9]+$/.test(link), `share link created: ${link}`);
+check(/\?src=ref-trip-[a-z0-9]+-host$/.test(link), `host share link created: ${link}`);
+const refEvent = await page.evaluate(() => {
+  const st = JSON.parse(localStorage.getItem("deklinic.journey.v1"));
+  const r = st.referrals.find((x) => x.channel === "host" && x.fromTripId !== "trip-s2");
+  return r && st.events.some((e) => e.type === "referred" && e.sourceId === r.sourceId);
+});
+check(refEvent, "host referral is traceable in the event log");
 check((await text("share-preview")).includes("Adwoa visited De Klinic"), "share preview visible");
 await page.getByTestId("copy-link").click();
 await page.getByTestId("copy-link").filter({ hasText: "Copied" }).waitFor({ timeout: 3000 });
@@ -317,6 +344,24 @@ for (const t of ["discovered", "saved", "checked_in", "visit_confirmed", "referr
   check((await page.getByTestId(`timeline-${t}`).count()) >= 1, `timeline has ${t}`);
 }
 check((await page.getByTestId("timeline").innerText()).includes("Their link brought in a new guest"), "timeline shows the referred guest");
+check((await page.getByTestId("timeline").innerText()).includes("for a host in accra"), "timeline shows the referral channel");
+
+// Item 2: Mark answered + Reply on WhatsApp.
+const firstQ = page.getByTestId("question").first();
+const qText = await firstQ.locator("p").first().innerText();
+const replyHref = await firstQ.getByTestId("reply-whatsapp").getAttribute("href");
+check(replyHref.startsWith("https://wa.me/233000000000?text=") && decodeURIComponent(replyHref).includes(qText), "Reply on WhatsApp prefills the question with the sample number");
+check((await text("questions-count")) === "4 open", "4 open before answering");
+await firstQ.getByTestId("mark-answered").click();
+check((await text("questions-count")) === "3 open", "Mark answered moves it out of the open count");
+check((await text("answered-count")).includes("1 answered"), "answered count shown");
+check(
+  await page.evaluate(() => JSON.parse(localStorage.getItem("deklinic.journey.v1")).events.some((e) => e.type === "question_answered")),
+  "answering logs a question_answered event",
+);
+await page.reload();
+await page.getByTestId("questions-count").waitFor();
+check((await text("questions-count")) === "3 open", "answered state persists after reload");
 const sw2 = await page.evaluate(() => document.documentElement.scrollWidth);
 check(sw2 <= 390, `dashboard has no horizontal scroll at 390px (scrollWidth=${sw2})`);
 await shot("7-dashboard");

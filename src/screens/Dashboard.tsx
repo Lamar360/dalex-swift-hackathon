@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
-import { findSource, getState, tripTimeline, useStore } from "../lib/store";
+import { VENUE, whatsappLink } from "../data/venue";
+import { answerQuestion, findSource, getState, REFERRAL_CHANNELS, tripTimeline, useStore } from "../lib/store";
 import type { EventType, JourneyEvent } from "../lib/types";
 import { GUEST_TYPES, guestTypeLabel, SOURCE_TYPE_ICON, SOURCE_TYPE_LABEL } from "./Discover";
 import { formatDate } from "./SaveTrip";
@@ -51,6 +52,7 @@ export function Dashboard() {
       }),
       savedCount: saved.length,
       pendingCheckIns: trips.filter((t) => t.status === "checked-in").length,
+      interested: new Set(events.filter((e) => e.type === "interested").map((e) => e.visitorId)).size,
     };
   }, [events, trips, sources, referrals]);
 
@@ -67,18 +69,18 @@ export function Dashboard() {
 
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <div className="card tilt bg-cocoa-900 text-cream-100">
-          <p className="text-sm font-semibold text-sand-300">Expected December arrivals</p>
+          <p className="text-sm font-semibold text-sand-300">December arrivals</p>
           <p className="font-display text-4xl font-bold text-gold-400" data-testid="dec-trips">
             {stats.decTrips}
           </p>
-          <p className="text-sm text-cream-200">saved trips</p>
+          <p className="text-sm text-cream-200">saved trips arriving in December</p>
         </div>
         <div className="card tilt bg-cocoa-900 text-cream-100">
-          <p className="text-sm font-semibold text-sand-300">Total guests</p>
+          <p className="text-sm font-semibold text-sand-300">December guests</p>
           <p className="font-display text-4xl font-bold text-gold-400" data-testid="dec-guests">
             {stats.decGuests}
           </p>
-          <p className="text-sm text-cream-200">across those trips</p>
+          <p className="text-sm text-cream-200">people on those December trips</p>
         </div>
         <div className="card tilt col-span-2 flex items-center justify-between gap-4 sm:col-span-1 sm:block">
           <p className="text-sm font-semibold text-cocoa-500">Pending check-ins</p>
@@ -116,6 +118,12 @@ export function Dashboard() {
             </li>
           ))}
         </ol>
+        <p className="border-t border-cream-200 pt-3 text-sm text-cocoa-700">
+          <strong className="text-lg text-cocoa-950" data-testid="interested-count">
+            {stats.interested}
+          </strong>{" "}
+          {stats.interested === 1 ? "visitor" : "visitors"} tapped “I’m interested” on the venue page.
+        </p>
       </section>
 
       <section aria-labelledby="sources-heading" className="card space-y-3">
@@ -165,6 +173,10 @@ export function Dashboard() {
         <h2 id="guest-type-heading" className="text-xl font-bold">
           Who’s coming
         </h2>
+        <p className="-mt-2 text-sm text-cocoa-500" data-testid="guest-type-scope">
+          All saved and visited trips ({stats.savedCount} trips, {stats.guestTypes.reduce((n, g) => n + g.guests, 0)} guests),
+          not just December.
+        </p>
         <ul className="space-y-3" data-testid="guest-type-breakdown">
           {stats.guestTypes.map((g) => (
             <li key={g.value}>
@@ -200,13 +212,14 @@ function QuestionsPanel() {
   const questions = useStore((s) => s.questions);
   const trips = useStore((s) => s.trips);
   const open = [...questions].filter((q) => q.status === "open").sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const answered = questions.filter((q) => q.status === "answered").length;
   return (
     <section aria-labelledby="questions-heading" className="card space-y-3" data-testid="questions-panel">
       <div className="flex items-baseline justify-between gap-3">
         <h2 id="questions-heading" className="text-xl font-bold">
           Questions from travellers
         </h2>
-        <span className="rounded-full bg-gold-400/30 px-3 py-0.5 text-sm font-bold" data-testid="questions-count">
+        <span className="shrink-0 rounded-full bg-gold-400/30 px-3 py-0.5 text-sm font-bold whitespace-nowrap" data-testid="questions-count">
           {open.length} open
         </span>
       </div>
@@ -223,32 +236,58 @@ function QuestionsPanel() {
                   {new Date(q.createdAt).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
                   {trip ? ` · ${trip.name}` : " · No trip saved yet"}
                 </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => answerQuestion(q.id)}
+                    className="inline-flex min-h-10 items-center rounded-full bg-palm-600 px-4 text-sm font-semibold text-cream-50 hover:bg-palm-600/90"
+                    data-testid="mark-answered"
+                  >
+                    Mark answered
+                  </button>
+                  <a
+                    href={whatsappLink(`Hi, this is De Klinic replying to your question: “${q.text}”`)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex min-h-10 items-center rounded-full border-2 border-cocoa-900 px-4 text-sm font-semibold hover:bg-cream-200"
+                    data-testid="reply-whatsapp"
+                  >
+                    Reply on WhatsApp
+                  </a>
+                </div>
               </li>
             );
           })}
         </ul>
       )}
-      <p className="text-xs text-cocoa-500">Collected by the demo assistant (not AI). Sample data.</p>
+      <p className="text-xs text-cocoa-500">
+        Collected by the demo assistant (not AI). {answered > 0 && <span data-testid="answered-count">{answered} answered. </span>}
+        WhatsApp replies use {VENUE.whatsapp.display}. Sample data.
+      </p>
     </section>
   );
 }
 
 const EVENT_LABEL: Record<EventType, string> = {
   discovered: "Discovered De Klinic",
+  interested: "Tapped “I’m interested”",
   saved: "Saved trip to itinerary",
   checked_in: "Tapped “I’ve arrived” (pending staff check)",
   visit_confirmed: "Visit confirmed by staff",
   referred: "Created a referral link",
   question_asked: "Asked De Klinic a question",
+  question_answered: "De Klinic answered their question",
 };
 
 const EVENT_DOT: Record<EventType, string> = {
   discovered: "bg-sand-300",
+  interested: "bg-gold-400/50",
   saved: "bg-gold-400",
   checked_in: "bg-clay-500/50",
   visit_confirmed: "bg-palm-600",
   referred: "bg-clay-500",
   question_asked: "bg-cocoa-500",
+  question_answered: "bg-palm-600/60",
 };
 
 function GuestTimeline() {
@@ -282,6 +321,11 @@ function GuestTimeline() {
     if (e.type === "visit_confirmed") {
       const v = s.visits.find((x) => x.tripId === e.tripId);
       return `${EVENT_LABEL.visit_confirmed}${v ? ` (${v.confirmedBy})` : ""}`;
+    }
+    if (e.type === "referred") {
+      const ch = s.referrals.find((r) => r.sourceId === e.sourceId)?.channel;
+      const label = REFERRAL_CHANNELS.find((c) => c.value === ch)?.label.toLowerCase();
+      return label ? `${EVENT_LABEL.referred} for ${label}` : EVENT_LABEL.referred;
     }
     return EVENT_LABEL[e.type];
   }

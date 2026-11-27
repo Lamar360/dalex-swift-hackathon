@@ -4,7 +4,7 @@ import type { AppState, JourneyEvent, Trip } from "./types";
  * SAMPLE DATA ONLY. None of these people, groups or quotes are real.
  * Nothing here is a fact about De Klinic Restaurant & Pub.
  */
-export const STATE_VERSION = 4;
+export const STATE_VERSION = 5;
 
 export const DEMO_ARRIVAL_CODE = "DK-7HQ4";
 
@@ -173,6 +173,10 @@ export function createSeed(): AppState {
     log({ type: "discovered", at: d.at, visitorId: `visitor-browse-${i + 1}`, tripId: null, sourceId: d.sourceId }),
   );
 
+  // Two browsing visitors expressed interest without saving a trip (sample).
+  log({ type: "interested", at: "2026-11-14T11:42:00.000Z", visitorId: "visitor-browse-2", tripId: null, sourceId: "ai-accra-guide" });
+  log({ type: "interested", at: "2026-11-19T13:55:00.000Z", visitorId: "visitor-browse-6", tripId: null, sourceId: "afrobeat-routes" });
+
   const kwameReferral = "2026-11-15T10:00:00.000Z";
   log({ type: "referred", at: kwameReferral, visitorId: "visitor-trip-s2", tripId: "trip-s2", sourceId: "ref-trip-s2" });
 
@@ -233,7 +237,7 @@ export function createSeed(): AppState {
         verifiedVisit: false,
       },
     ],
-    referrals: [{ id: "ref-1", fromTripId: "trip-s2", sourceId: "ref-trip-s2", createdAt: kwameReferral }],
+    referrals: [{ id: "ref-1", fromTripId: "trip-s2", sourceId: "ref-trip-s2", channel: "community", createdAt: kwameReferral }],
     events,
     questions: [
       {

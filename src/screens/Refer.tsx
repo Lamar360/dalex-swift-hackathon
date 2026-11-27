@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { createReferral, currentTrip, referralForTrip, useStore } from "../lib/store";
+import { createReferral, currentTrip, REFERRAL_CHANNELS, referralFor, useStore } from "../lib/store";
+import type { ReferralChannel } from "../lib/types";
 
 export function Refer() {
   const trip = useStore(currentTrip);
-  const referral = useStore((s) => referralForTrip(s, trip?.id));
+  const [channel, setChannel] = useState<ReferralChannel>("community");
+  const referral = useStore((s) => referralFor(s, trip?.id, channel));
   const broughtIn = useStore((s) =>
     referral ? s.events.filter((e) => e.type === "discovered" && e.sourceId === referral.sourceId).length : 0,
   );
@@ -48,11 +50,44 @@ export function Refer() {
         </p>
       </section>
 
-      {!referral ? (
-        <button type="button" className="btn-primary" onClick={() => createReferral(trip.id)} data-testid="create-referral">
-          Create my share link
-        </button>
-      ) : (
+      <fieldset className="card space-y-3">
+        <legend className="sr-only">Who are you referring De Klinic to?</legend>
+        <p className="field-label">Who are you sharing with?</p>
+        <div className="grid gap-2 sm:grid-cols-3" data-testid="referral-channel">
+          {REFERRAL_CHANNELS.map((c) => (
+            <label
+              key={c.value}
+              className="flex cursor-pointer flex-col rounded-xl border-2 border-sand-300 px-4 py-3 has-[:checked]:border-clay-500 has-[:checked]:bg-cream-100 has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-gold-500"
+            >
+              <input
+                type="radio"
+                name="channel"
+                value={c.value}
+                checked={channel === c.value}
+                onChange={() => {
+                  setChannel(c.value);
+                  setCopied("idle");
+                }}
+                className="sr-only"
+              />
+              <span className="font-semibold">{c.label}</span>
+              <span className="text-sm text-cocoa-500">{c.hint}</span>
+            </label>
+          ))}
+        </div>
+        {!referral && (
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => createReferral(trip.id, channel)}
+            data-testid="create-referral"
+          >
+            Create my share link
+          </button>
+        )}
+      </fieldset>
+
+      {referral && (
         <>
           <section className="card space-y-3">
             <label htmlFor="share-link" className="field-label">
