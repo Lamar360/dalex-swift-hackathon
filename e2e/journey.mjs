@@ -123,6 +123,8 @@ check((await page.getByTestId("view-staff").count()) === 0, "View as links hidde
 await page.getByTestId("demo-menu").click();
 await page.getByTestId("view-staff").waitFor();
 check((await page.getByTestId("demo-menu").getAttribute("aria-expanded")) === "true", "Demo menu opens (aria-expanded)");
+const menuBox = await page.locator("nav[aria-label='Demo views and pages']").boundingBox();
+check(menuBox.height <= 844 * 0.7 && menuBox.width <= 260, `Demo menu is compact on mobile (${Math.round(menuBox.width)}×${Math.round(menuBox.height)})`);
 await page.keyboard.press("Escape");
 check((await page.getByTestId("view-staff").count()) === 0, "Demo menu closes on Esc");
 check(await page.getByTestId("demo-menu").evaluate((el) => el === document.activeElement), "focus returns to Demo button");
@@ -264,6 +266,42 @@ async function checkCopy(testId, expected, label) {
 await checkCopy("copy-arrival-code", code, "arrival code");
 await checkCopy("copy-whatsapp", "+233000000000", "WhatsApp number");
 
+// "I'm on my way" heads-up, prefilled from the saved trip.
+await page.getByTestId("headsup-form").waitFor();
+check((await page.getByTestId("headsup-date").inputValue()) === "2026-12-18", "heads-up: date prefilled from the trip");
+check((await page.getByTestId("headsup-guests").inputValue()) === "4", "heads-up: party size prefilled from the trip (4)");
+await page.getByTestId("headsup-date").fill("2026-12-19");
+await page.getByTestId("headsup-time").fill("21:30");
+await page.getByTestId("headsup-submit").click();
+await page.getByTestId("headsup-sent").waitFor();
+check((await text("headsup-summary")) === "19 Dec 2026 at 21:30, party of 4", `heads-up: confirmation shown (${await text("headsup-summary")})`);
+const huHref = await page.getByTestId("headsup-whatsapp").getAttribute("href");
+const huMsg = decodeURIComponent(huHref);
+check(huHref.startsWith("https://wa.me/233000000000?text=") && huMsg.includes("19 Dec 2026") && huMsg.includes("21:30") && huMsg.includes("party of 4") && huMsg.includes(code), "heads-up: Send on WhatsApp prefilled with date, time, party size and code (sample number)");
+const huStored = await page.evaluate(() => {
+  const st = JSON.parse(localStorage.getItem("deklinic.journey.v1"));
+  const t = st.trips.find((x) => x.id === st.session.tripId);
+  return { hu: t.headsUp, ev: st.events.filter((e) => e.type === "heads_up" && e.tripId === t.id).at(-1) };
+});
+check(huStored.hu?.date === "2026-12-19" && huStored.hu?.time === "21:30" && huStored.hu?.guests === 4 && !!huStored.ev?.at, "heads-up: saved to the trip with a timestamped event");
+check((await text("trip-status")).includes("Saved"), "heads-up does not verify the visit (still Saved)");
+await page.reload();
+await page.getByTestId("headsup-sent").waitFor();
+check(true, "heads-up survives reload");
+// Polish: the floating assistant button leaves the last buttons on My trip clear.
+async function checkFabClear(label) {
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await page.waitForTimeout(150);
+  const fabTop = (await page.getByTestId("assistant-open").boundingBox()).y;
+  const lastBottom = await page.locator("main").evaluate((m) => {
+    // Bottom of the last visible content (text or buttons) in the page.
+    const els = [...m.querySelectorAll("*")].filter((e) => e.offsetParent && e.children.length === 0);
+    return Math.max(...els.map((e) => e.getBoundingClientRect().bottom));
+  });
+  check(lastBottom <= fabTop, `${label}: assistant button does not cover the last button or text (${Math.round(lastBottom)} ≤ ${Math.round(fabTop)})`);
+}
+await checkFabClear("My trip");
+
 // Arrival section (values from src/data/venue.ts).
 await page.getByTestId("arrival").waitFor();
 check((await text("arrival-address")).includes("Address to be confirmed"), "arrival: address shown as 'Address to be confirmed'");
@@ -295,6 +333,9 @@ check(
   "'I'm interested' logged as an event",
 );
 check((await text("pending-checkins")) === "1", "dashboard counts 1 pending check-in");
+const arriving = await text("arriving-soon");
+check((await page.getByTestId("arriving-item").count()) === 2 && arriving.includes("Adwoa Asare") && arriving.includes("19 Dec 2026, 21:30") && arriving.includes("Party of 4"), "dashboard Arriving soon lists the heads-up (guest, date, time, party size)");
+check(arriving.includes("Sample data"), "Arriving soon labelled as sample data");
 check((await text("questions-count")) === "4 open", "unknown assistant question reaches the dashboard (4 open)");
 check((await text("questions-panel")).includes(UNKNOWN_Q), "questions panel lists the new question");
 
@@ -327,10 +368,15 @@ check((await text("staff-guest-type")) === "Friends", "staff sees guest type (Fr
 check((await text("staff-checkin")).startsWith("Yes"), "staff sees the guest checked in");
 await checkCopy("copy-staff-code", code, "staff arrival code");
 check((await text("status-pill")) === "Pending check-in", "staff sees Pending check-in status");
+check((await text("staff-headsup")).includes("19 Dec 2026 at 21:30, party of 4"), "staff sees the guest's heads-up with the trip details");
+const confirmBox = await page.getByTestId("staff-confirm").boundingBox();
+const resultBox = await page.getByTestId("staff-result").boundingBox();
+check((await page.getByTestId("staff-confirm").count()) === 1 && confirmBox.height >= 60 && confirmBox.width >= resultBox.width * 0.8, `staff: one big Confirm visit button (${Math.round(confirmBox.width)}×${Math.round(confirmBox.height)})`);
 await shot("4-staff");
 await page.getByTestId("staff-confirm").click();
 await page.getByTestId("staff-confirmed").waitFor();
 check((await text("staff-confirmed")).includes("De Klinic staff (demo)"), "staff: visit confirmed by De Klinic staff (demo)");
+check((await page.getByTestId("staff-confirm").count()) === 0, "staff: one tap confirmed it (button gone)");
 await page.getByTestId("staff-lookup").click();
 await page.getByTestId("staff-already").waitFor();
 check(true, "staff: second lookup shows already confirmed");
@@ -353,6 +399,7 @@ await page.getByTestId("story").first().waitFor();
 check((await page.getByTestId("story").count()) === 3, "venue now shows 3 verified stories");
 const firstStory = await page.getByTestId("story").first().innerText();
 check(firstStory.includes("Verified visit") && firstStory.includes("Lovely evening"), "guest story shows with Verified visit badge");
+await checkFabClear("Venue");
 
 // 6. Refer.
 await page.goto(`${base}/refer`);
@@ -474,10 +521,14 @@ const headerBottom390 = await page.locator("header").evaluate((h) => h.getBoundi
 check(bannerBox.y >= headerBottom390, "December: banner sits below the header, not over it");
 const heroTop = (await page.locator(".hero").boundingBox()).y;
 check(bannerBox.y + bannerBox.height <= heroTop, "December: banner does not overlap the hero");
+check((await page.locator("#hero-heading + p").innerText()).includes("Plan your De Klinic visit before you land in Accra"), "Home explains the product (December)");
+check((await page.getByTestId("who-it-serves").count()) === 1, "Home says who it serves (December)");
 await checkHomeAboveFold("390x844 December mode with banner");
 await pickSeason("not-december");
 check((await page.getByTestId("xmas-banner").count()) === 0, "Not December: banner hidden immediately (no reload)");
 check((await page.locator("#hero-heading + p").innerText()).startsWith("Coming home to Ghana?"), "Not December: neutral home copy");
+check((await page.locator("#hero-heading + p").innerText()).includes("Plan your De Klinic visit before you land in Accra, and get it confirmed when you arrive."), "Home explains the product in one plain line (Not December)");
+check((await text("who-it-serves")).includes("diaspora travellers, families and groups"), "Home says who it serves (Not December)");
 await page.reload();
 await page.getByTestId("cta-venue").waitFor();
 check((await page.getByTestId("xmas-banner").count()) === 0, "Not December persists on reload");

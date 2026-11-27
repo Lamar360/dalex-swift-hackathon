@@ -101,10 +101,15 @@ export function Staff() {
                 The guest hasn’t tapped “I’ve arrived”. You can still confirm the visit if they’re here.
               </p>
             )}
+            {trip.headsUp && (
+              <p className="rounded-xl bg-cream-100 p-3 text-sm" data-testid="staff-headsup">
+                <strong>Heads-up:</strong> {formatDate(trip.headsUp.date)} at {trip.headsUp.time}, party of {trip.headsUp.guests}
+              </p>
+            )}
             {(trip.status === "saved" || trip.status === "checked-in") && (
               <button
                 type="button"
-                className="btn-primary"
+                className="btn-primary min-h-16 w-full text-xl"
                 onClick={() => {
                   confirmVisit(trip.id);
                   setJustConfirmed(true);

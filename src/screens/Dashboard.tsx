@@ -99,6 +99,8 @@ export function Dashboard() {
         </div>
       </section>
 
+      <ArrivingSoon />
+
       <section aria-labelledby="funnel-heading" className="card space-y-4">
         <h2 id="funnel-heading" className="text-xl font-bold">
           Journey funnel
@@ -216,6 +218,46 @@ export function Dashboard() {
   );
 }
 
+/** Guests who sent an "I'm on my way" heads-up and haven't been confirmed yet. */
+function ArrivingSoon() {
+  const trips = useStore((s) => s.trips);
+  const list = trips
+    .filter((t) => t.headsUp && t.status !== "visited")
+    .sort((a, b) => `${a.headsUp!.date}${a.headsUp!.time}`.localeCompare(`${b.headsUp!.date}${b.headsUp!.time}`));
+  return (
+    <section aria-labelledby="arriving-heading" className="card space-y-3" data-testid="arriving-soon">
+      <div className="flex items-baseline justify-between gap-2">
+        <h2 id="arriving-heading" className="text-xl font-bold">
+          Arriving soon
+        </h2>
+        <span className="text-sm whitespace-nowrap text-cocoa-500" data-testid="arriving-count">
+          {list.length} {list.length === 1 ? "heads-up" : "heads-ups"}
+        </span>
+      </div>
+      {list.length === 0 ? (
+        <p className="text-cocoa-700">No heads-ups yet. Guests send one from My trip.</p>
+      ) : (
+        <ul className="divide-y divide-cream-200">
+          {list.map((t) => (
+            <li key={t.id} className="flex items-center justify-between gap-3 py-2.5" data-testid="arriving-item">
+              <span className="min-w-0">
+                <span className="block truncate font-semibold">{t.name}</span>
+                <span className="block text-sm text-cocoa-500">
+                  {formatDate(t.headsUp!.date)}, {t.headsUp!.time}
+                </span>
+              </span>
+              <span className="shrink-0 rounded-full bg-cream-100 px-3 py-1 text-sm font-bold whitespace-nowrap">
+                Party of {t.headsUp!.guests}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="text-xs text-cocoa-500">“I’m on my way” heads-ups from guests. Not verified visits. Sample data.</p>
+    </section>
+  );
+}
+
 function QuestionsPanel() {
   const questions = useStore((s) => s.questions);
   const trips = useStore((s) => s.trips);
@@ -281,6 +323,7 @@ const EVENT_LABEL: Record<EventType, string> = {
   interested: "Tapped “I’m interested”",
   saved: "Saved trip to itinerary",
   checked_in: "Tapped “I’ve arrived” (pending staff check)",
+  heads_up: "Sent an “I’m on my way” heads-up",
   visit_confirmed: "Visit confirmed by staff",
   referred: "Created a referral link",
   question_asked: "Asked De Klinic a question",
@@ -292,6 +335,7 @@ const EVENT_DOT: Record<EventType, string> = {
   interested: "bg-gold-400/50",
   saved: "bg-gold-400",
   checked_in: "bg-clay-500/50",
+  heads_up: "bg-gold-500",
   visit_confirmed: "bg-palm-600",
   referred: "bg-clay-500",
   question_asked: "bg-cocoa-500",

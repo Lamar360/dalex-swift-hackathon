@@ -40,6 +40,18 @@ export interface Trip {
   status: TripStatus;
   /** ISO timestamp of the guest's own "I've arrived" tap. Never counts as verification. */
   checkedInAt?: string;
+  /** "I'm on my way" heads-up the guest sent, like a reservation. Not a verification. */
+  headsUp?: HeadsUp;
+}
+
+export interface HeadsUp {
+  /** ISO date (YYYY-MM-DD) */
+  date: string;
+  /** HH:MM */
+  time: string;
+  guests: number;
+  /** ISO timestamp */
+  sentAt: string;
 }
 
 export interface Visit {
@@ -71,6 +83,7 @@ export type EventType =
   | "interested"
   | "saved"
   | "checked_in"
+  | "heads_up"
   | "visit_confirmed"
   | "referred"
   | "question_asked"

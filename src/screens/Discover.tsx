@@ -107,9 +107,12 @@ export function Discover() {
           Your first night back in Accra starts here.
         </h1>
         <p className="mt-4 max-w-md text-lg text-cocoa-700">
-          {december ? "Coming home for December?" : "Coming home to Ghana?"} Save De Klinic to your Ghana itinerary and get an arrival code for the door.
+          {december ? "Coming home for December?" : "Coming home to Ghana?"} Plan your De Klinic visit before you land in Accra, and get it confirmed when you arrive.
         </p>
-        <Link to="/venue" className="btn-primary mt-7 text-lg" data-testid="cta-venue">
+        <p className="mt-2 text-sm font-semibold text-cocoa-500" data-testid="who-it-serves">
+          For diaspora travellers, families and groups.
+        </p>
+        <Link to="/venue" className="btn-primary mt-6 text-lg" data-testid="cta-venue">
           See De Klinic
         </Link>
       </section>

@@ -1,8 +1,8 @@
 import { useState, type FormEvent, type InputHTMLAttributes } from "react";
 import { Link } from "react-router";
 import { CopyButton } from "../components/CopyButton";
-import { VENUE, arrivalMessage, whatsappLink } from "../data/venue";
-import { addStory, checkIn, clearCurrentTrip, currentTrip, findSource, saveTrip, useStore } from "../lib/store";
+import { VENUE, arrivalMessage, headsUpMessage, whatsappLink } from "../data/venue";
+import { addStory, checkIn, clearCurrentTrip, currentTrip, findSource, saveTrip, sendHeadsUp, useStore } from "../lib/store";
 import type { GuestType, Trip } from "../lib/types";
 import { GUEST_TYPES, guestTypeLabel } from "./Discover";
 
@@ -210,6 +210,8 @@ function Confirmation({ trip }: { trip: Trip }) {
         </p>
       </section>
 
+      {!visited && <HeadsUpForm trip={trip} />}
+
       {!visited && <ArrivalSection trip={trip} pending={pending} />}
 
       {visited && (
@@ -270,6 +272,81 @@ function Confirmation({ trip }: { trip: Trip }) {
         </button>
       </div>
     </div>
+  );
+}
+
+/** "Tell De Klinic I'm coming": a reservation-style heads-up. It never verifies the visit. */
+function HeadsUpForm({ trip }: { trip: Trip }) {
+  const sent = trip.headsUp;
+  const [editing, setEditing] = useState(false);
+  const [date, setDate] = useState(sent?.date ?? trip.travelFrom);
+  const [time, setTime] = useState(sent?.time ?? "19:00");
+  const [guests, setGuests] = useState(String(sent?.guests ?? trip.groupSize));
+  const [error, setError] = useState("");
+
+  if (sent && !editing) {
+    const wa = whatsappLink(headsUpMessage(trip.name, formatDate(sent.date), sent.time, sent.guests, trip.arrivalCode));
+    return (
+      <section className="card space-y-3 border-2 border-palm-600/30" aria-live="polite" data-testid="headsup-sent">
+        <p className="font-bold text-palm-600">✓ De Klinic knows you’re coming</p>
+        <p className="text-lg font-semibold" data-testid="headsup-summary">
+          {formatDate(sent.date)} at {sent.time}, party of {sent.guests}
+        </p>
+        <p className="text-sm text-cocoa-500">
+          Sent {new Date(sent.sentAt).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}.
+          This is a heads-up, not a booking: staff still confirm your visit at the door.
+        </p>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <a href={wa} target="_blank" rel="noreferrer" className="btn-primary sm:w-auto" data-testid="headsup-whatsapp">
+            Send on WhatsApp
+          </a>
+          <button type="button" className="btn-secondary sm:w-auto" onClick={() => setEditing(true)} data-testid="headsup-edit">
+            Change details
+          </button>
+        </div>
+        <p className="text-xs text-cocoa-500">{VENUE.whatsapp.display}. Sample data.</p>
+      </section>
+    );
+  }
+
+  return (
+    <form
+      className="card space-y-4"
+      noValidate
+      data-testid="headsup-form"
+      onSubmit={(e) => {
+        e.preventDefault();
+        const n = Number(guests);
+        if (!date || !time) return setError("Choose a date and a time.");
+        if (!Number.isInteger(n) || n < 1 || n > 30) return setError("Party size must be between 1 and 30.");
+        sendHeadsUp(trip.id, { date, time, guests: n });
+        setEditing(false);
+        setError("");
+      }}
+    >
+      <div>
+        <h2 className="text-2xl font-bold">Tell De Klinic I’m coming</h2>
+        <p className="mt-1 text-cocoa-700">Like a reservation: let the team know when to expect you.</p>
+      </div>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="col-span-2 sm:col-span-1">
+          <label htmlFor="hu-date" className="field-label">Arrival date</label>
+          <input id="hu-date" type="date" className="field" value={date} onChange={(e) => setDate(e.target.value)} data-testid="headsup-date" />
+        </div>
+        <div>
+          <label htmlFor="hu-time" className="field-label">Time</label>
+          <input id="hu-time" type="time" className="field" value={time} onChange={(e) => setTime(e.target.value)} data-testid="headsup-time" />
+        </div>
+        <div>
+          <label htmlFor="hu-guests" className="field-label">Guests</label>
+          <input id="hu-guests" type="number" inputMode="numeric" min={1} max={30} className="field" value={guests} onChange={(e) => setGuests(e.target.value)} data-testid="headsup-guests" />
+        </div>
+      </div>
+      {error && <p className="text-sm font-semibold text-clay-700" role="alert">{error}</p>}
+      <button type="submit" className="btn-primary" data-testid="headsup-submit">
+        Tell De Klinic I’m coming
+      </button>
+    </form>
   );
 }
 

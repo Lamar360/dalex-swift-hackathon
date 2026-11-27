@@ -89,17 +89,17 @@ function DemoMenu({ tripOpen }: { tripOpen: boolean }) {
         <nav
           id={menuId}
           aria-label="Demo views and pages"
-          className="pop absolute right-0 z-50 mt-2 w-64 rounded-2xl bg-white p-2 text-cocoa-900 shadow-[var(--shadow-float)]"
+          className="pop absolute right-0 z-50 mt-2 max-h-[min(70dvh,30rem)] w-60 overflow-y-auto overscroll-contain rounded-2xl bg-white p-1.5 text-cocoa-900 shadow-[var(--shadow-float)] sm:w-64 sm:p-2"
         >
-          <p className="px-3 pt-1 pb-1 text-sm text-cocoa-500">View as</p>
+          <p className="px-3 pt-0.5 pb-0.5 text-xs text-cocoa-500">View as</p>
           {AUDIENCES.map((a) => {
             const active = current?.key === a.key;
             return (
-              <div key={a.key} className="border-b border-cream-200 py-1 last:border-0">
+              <div key={a.key} className="border-b border-cream-200 py-0.5 last:border-0">
                 <Link
                   to={a.key === "traveller" && tripOpen ? "/trip" : a.tabs[0].to}
                   aria-current={active ? "true" : undefined}
-                  className={`flex min-h-11 items-center justify-between rounded-xl px-3 font-semibold ${
+                  className={`flex min-h-10 items-center justify-between rounded-xl px-3 font-semibold ${
                     active ? "bg-cream-100 text-cocoa-950" : "hover:bg-cream-100"
                   }`}
                   data-testid={`view-${a.key}`}
@@ -107,14 +107,14 @@ function DemoMenu({ tripOpen }: { tripOpen: boolean }) {
                   {a.label}
                   {active && <span className="h-2 w-2 rounded-full bg-clay-500" aria-hidden />}
                 </Link>
-                <ul className="flex flex-wrap gap-x-1 px-2 pb-1">
+                <ul className="flex flex-wrap gap-x-0.5 px-2 pb-0.5">
                   {a.tabs.map((t) => (
                     <li key={t.to}>
                       <NavLink
                         to={t.to}
                         end
                         className={({ isActive }) =>
-                          `inline-flex min-h-9 items-center rounded-lg px-2 text-sm ${
+                          `inline-flex min-h-8 items-center rounded-lg px-2 text-sm ${
                             isActive ? "font-semibold text-clay-700" : "text-cocoa-700 hover:bg-cream-100"
                           }`
                         }
@@ -144,9 +144,9 @@ const SEASONS: { value: SeasonMode; label: string }[] = [
 function SeasonControl() {
   const { mode, december } = useSeason();
   return (
-    <fieldset className="border-t border-cream-200 px-3 pt-2 pb-1">
+    <fieldset className="border-t border-cream-200 px-2 pt-1.5 pb-0.5">
       <legend className="sr-only">Season</legend>
-      <p className="pb-1.5 text-sm text-cocoa-500" data-testid="season-current" aria-live="polite">
+      <p className="pb-1 text-xs text-cocoa-500" data-testid="season-current" aria-live="polite">
         Season: {SEASONS.find((s) => s.value === mode)!.label}
         {mode === "auto" && ` (${december ? "December" : "not December"} today)`}
       </p>
@@ -154,7 +154,7 @@ function SeasonControl() {
         {SEASONS.map((s) => (
           <label
             key={s.value}
-            className="flex min-h-11 cursor-pointer items-center justify-center rounded-lg px-1 text-center text-xs leading-tight font-semibold text-cocoa-700 has-[:checked]:bg-white has-[:checked]:text-cocoa-950 has-[:checked]:shadow-[var(--shadow-card)] has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-gold-500"
+            className="flex min-h-10 cursor-pointer items-center justify-center rounded-lg px-1 text-center text-xs leading-tight font-semibold text-cocoa-700 has-[:checked]:bg-white has-[:checked]:text-cocoa-950 has-[:checked]:shadow-[var(--shadow-card)] has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-gold-500"
           >
             <input
               type="radio"
@@ -243,7 +243,7 @@ export function Layout() {
         {STEPPER_PAGES.includes(pathname) && <JourneyProgress current={current} completed={completed} />}
       </header>
 
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:py-12">
+      <main className={`mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:py-12 ${isTraveller ? "pb-24 sm:pb-28" : ""}`}>
         <Outlet />
       </main>
 

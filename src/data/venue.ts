@@ -52,6 +52,10 @@ export function whatsappLink(text: string): string {
   return `https://wa.me/${VENUE.whatsapp.number}?text=${encodeURIComponent(text)}`;
 }
 
+export function headsUpMessage(name: string, date: string, time: string, guests: number, code: string): string {
+  return `Hi De Klinic, this is ${name}. I'm coming on ${date} at about ${time}, party of ${guests}. My arrival code is ${code}.`;
+}
+
 export function arrivalMessage(code: string): string {
   return `Hi De Klinic, I'm on my way for my visit. My arrival code is ${code}.`;
 }

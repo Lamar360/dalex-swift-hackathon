@@ -215,6 +215,20 @@ export function checkIn(tripId: string) {
   });
 }
 
+/** The guest's "I'm on my way" heads-up. Saved to the trip and logged; it never verifies the visit. */
+export function sendHeadsUp(tripId: string, input: { date: string; time: string; guests: number }) {
+  setState((s) => {
+    const trip = s.trips.find((t) => t.id === tripId);
+    if (!trip || trip.status === "visited") return s;
+    const sentAt = new Date().toISOString();
+    return {
+      ...s,
+      trips: s.trips.map((t) => (t.id === tripId ? { ...t, headsUp: { ...input, sentAt } } : t)),
+      events: [...s.events, event("heads_up", s, { at: sentAt, tripId, visitorId: trip.visitorId, sourceId: trip.sourceId })],
+    };
+  });
+}
+
 /** Staff only. Works whether or not the guest checked in first. */
 export function confirmVisit(tripId: string) {
   setState((s) => {
