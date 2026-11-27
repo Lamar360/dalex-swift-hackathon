@@ -7,12 +7,14 @@ export const SOURCE_TYPE_LABEL: Record<SourceType, string> = {
   community: "Diaspora community",
   "ai-travel": "AI travel answer",
   curator: "Travel curator",
+  referral: "Friend who visited",
 };
 
-const SOURCE_TYPE_ICON: Record<SourceType, string> = {
+export const SOURCE_TYPE_ICON: Record<SourceType, string> = {
   community: "👥",
   "ai-travel": "✦",
   curator: "🧭",
+  referral: "🤝",
 };
 
 export function Discover() {
@@ -43,7 +45,8 @@ export function Discover() {
               {SOURCE_TYPE_ICON[source.type]} {SOURCE_TYPE_LABEL[source.type]} · {source.country}
             </p>
             <p className="mt-2 text-xl leading-snug sm:text-2xl">
-              You were referred by <strong className="font-display text-cocoa-950">{source.label}</strong>
+              You were referred by{" "}
+              <strong className="font-display text-cocoa-950">{source.label.replace(/^Referred by /, "")}</strong>
             </p>
             <p className="mt-2 text-sm text-cocoa-500">
               We’ve noted this so they get credit if you visit. (Sample data)
@@ -87,7 +90,7 @@ export function Discover() {
             For the demo: each link simulates arriving from a different overseas source.
           </p>
           <ul className="mt-3 space-y-2">
-            {sources.map((s) => (
+            {sources.filter((s) => s.type !== "referral").map((s) => (
               <li key={s.id}>
                 <Link
                   to={`/?src=${s.id}`}

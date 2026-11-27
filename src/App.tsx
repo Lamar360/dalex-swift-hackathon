@@ -1,7 +1,10 @@
 import { BrowserRouter, Link, Route, Routes } from "react-router";
 import { Layout } from "./components/Layout";
+import { Dashboard } from "./screens/Dashboard";
 import { Discover } from "./screens/Discover";
+import { Refer } from "./screens/Refer";
 import { SaveTrip } from "./screens/SaveTrip";
+import { Staff } from "./screens/Staff";
 import { Venue } from "./screens/Venue";
 
 function NotFound() {
@@ -23,6 +26,9 @@ export function App() {
           <Route index element={<Discover />} />
           <Route path="venue" element={<Venue />} />
           <Route path="trip" element={<SaveTrip />} />
+          <Route path="refer" element={<Refer />} />
+          <Route path="staff" element={<Staff />} />
+          <Route path="dashboard" element={<Dashboard />} />
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>

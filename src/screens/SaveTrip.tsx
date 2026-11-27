@@ -1,10 +1,10 @@
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type InputHTMLAttributes } from "react";
 import { Link } from "react-router";
-import { clearCurrentTrip, currentTrip, findSource, saveTrip, useStore } from "../lib/store";
+import { addStory, clearCurrentTrip, currentTrip, findSource, saveTrip, useStore } from "../lib/store";
 import type { Trip } from "../lib/types";
 
 const DEMO_FILL = {
-  name: "Akosua Mensah (sample)",
+  name: "Adwoa Asare (sample)",
   originCity: "London, UK",
   travelFrom: "2026-12-18",
   travelTo: "2027-01-03",
@@ -28,7 +28,7 @@ function validate(v: FormValues): Errors {
   return e;
 }
 
-function formatDate(iso: string) {
+export function formatDate(iso: string) {
   return new Date(`${iso}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 }
 
@@ -69,7 +69,7 @@ function TripForm() {
     }, 600);
   }
 
-  const field = (key: keyof FormValues, label: string, props: React.InputHTMLAttributes<HTMLInputElement>) => (
+  const field = (key: keyof FormValues, label: string, props: InputHTMLAttributes<HTMLInputElement>) => (
     <div>
       <label htmlFor={`f-${key}`} className="field-label">
         {label}
@@ -138,22 +138,52 @@ function TripForm() {
 
 function Confirmation({ trip }: { trip: Trip }) {
   const source = useStore((s) => findSource(s, trip.sourceId));
+  const visit = useStore((s) => s.visits.find((v) => v.tripId === trip.id));
+  const story = useStore((s) => s.stories.find((st) => st.tripId === trip.id));
+  const visited = trip.status === "visited";
+
   return (
     <div className="rise space-y-6" data-testid="confirmation">
       <section className="space-y-2">
-        <p className="text-sm font-bold tracking-wide text-palm-600 uppercase">✓ Saved to your itinerary</p>
-        <h1 className="text-4xl font-bold">See you in Accra, {trip.name.split(" ")[0]}.</h1>
+        {visited ? (
+          <p className="text-sm font-bold tracking-wide text-palm-600 uppercase" data-testid="visit-confirmed">
+            ✓ Visit confirmed
+          </p>
+        ) : (
+          <p className="text-sm font-bold tracking-wide text-palm-600 uppercase">✓ Saved to your itinerary</p>
+        )}
+        <h1 className="text-4xl font-bold">
+          {visited ? "Akwaaba, and thank you" : "See you in Accra"}, {trip.name.split(" ")[0]}.
+        </h1>
       </section>
 
       <section className="card bg-cocoa-900 text-center text-cream-100" aria-labelledby="code-label">
         <p id="code-label" className="text-sm font-semibold tracking-[0.2em] text-sand-300 uppercase">
           Your arrival code
         </p>
-        <p className="mt-2 font-mono text-5xl font-bold tracking-widest text-gold-400" data-testid="arrival-code">
+        <p
+          className={`mt-2 font-mono text-5xl font-bold tracking-widest ${visited ? "text-cream-200/60 line-through" : "text-gold-400"}`}
+          data-testid="arrival-code"
+        >
           {trip.arrivalCode}
         </p>
-        <p className="mt-3 text-cream-200">Show this at De Klinic so staff can confirm your visit.</p>
+        <p className="mt-3 text-cream-200">
+          {visited ? "Used. Your visit has been confirmed by staff." : "Show this at De Klinic so staff can confirm your visit."}
+        </p>
       </section>
+
+      {visited && (
+        <>
+          <StoryBox tripId={trip.id} existing={story?.text} />
+          <section className="card space-y-3 border-2 border-gold-400">
+            <h2 className="text-xl font-bold">Bring someone with you next time</h2>
+            <p className="text-cocoa-700">Share your own link so friends planning a trip see where you went.</p>
+            <Link to="/refer" className="btn-primary" data-testid="cta-refer">
+              Refer a friend <span aria-hidden>→</span>
+            </Link>
+          </section>
+        </>
+      )}
 
       <section className="card">
         <h2 className="text-xl font-bold">Trip details</h2>
@@ -163,16 +193,30 @@ function Confirmation({ trip }: { trip: Trip }) {
             ["From", trip.originCity],
             ["Dates", `${formatDate(trip.travelFrom)} – ${formatDate(trip.travelTo)}`],
             ["Group size", String(trip.groupSize)],
-            ["Referred by", source?.label ?? "No referral (direct)"],
-            ["Status", "Saved, visit not yet confirmed"],
+            ["Referred by", source?.label.replace(/^Referred by /, "") ?? "No referral (direct)"],
+            [
+              "Status",
+              visited && visit
+                ? `Visited · confirmed ${new Date(visit.confirmedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`
+                : "Saved, visit not yet confirmed",
+            ],
           ].map(([k, v]) => (
-            <div key={k} className="flex flex-wrap justify-between gap-2 py-3">
+            <div key={k} className="flex flex-wrap justify-between gap-x-4 gap-y-1 py-3">
               <dt className="font-semibold">{k}</dt>
-              <dd className="text-right">{v}</dd>
+              <dd className="text-right" data-testid={k === "Status" ? "trip-status" : undefined}>
+                {v}
+              </dd>
             </div>
           ))}
         </dl>
       </section>
+
+      {!visited && (
+        <p className="card bg-cream-100 text-sm text-cocoa-700 shadow-none">
+          Demo tip: open <Link to="/staff" className="font-semibold text-clay-700 underline">Staff view</Link> and
+          enter <span className="font-mono font-bold">{trip.arrivalCode}</span> to confirm this visit.
+        </p>
+      )}
 
       <div className="flex flex-col gap-3 sm:flex-row">
         <Link to="/venue" className="btn-secondary">
@@ -182,7 +226,64 @@ function Confirmation({ trip }: { trip: Trip }) {
           Plan another trip
         </button>
       </div>
-      <p className="text-sm text-cocoa-500">Next steps (Visit, Refer) are coming in a later build.</p>
     </div>
+  );
+}
+
+function StoryBox({ tripId, existing }: { tripId: string; existing?: string }) {
+  const [text, setText] = useState("");
+  const [error, setError] = useState("");
+
+  if (existing) {
+    return (
+      <section className="card space-y-2" data-testid="story-saved">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-palm-100 px-3 py-1 text-sm font-bold text-palm-600">
+          ✓ Verified visit
+        </span>
+        <blockquote className="text-lg">“{existing}”</blockquote>
+        <p className="text-sm text-cocoa-500">
+          Thanks! Your story now appears on the <Link to="/venue" className="underline">venue page</Link>.
+        </p>
+      </section>
+    );
+  }
+
+  return (
+    <form
+      className="card space-y-3"
+      onSubmit={(e) => {
+        e.preventDefault();
+        const t = text.trim();
+        if (t.length < 10) return setError("Please write at least a short sentence (10+ characters).");
+        addStory(tripId, t);
+      }}
+    >
+      <label htmlFor="story" className="field-label text-xl">
+        How was your visit?
+      </label>
+      <p className="text-sm text-cocoa-700">A line or two. It will show on the venue page as a verified visit.</p>
+      <textarea
+        id="story"
+        maxLength={280}
+        rows={3}
+        value={text}
+        onChange={(e) => {
+          setText(e.target.value);
+          setError("");
+        }}
+        className="field py-3"
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? "story-error" : undefined}
+        placeholder="e.g. We came for one drink and stayed all evening."
+      />
+      {error && (
+        <p id="story-error" className="text-sm font-semibold text-clay-700">
+          {error}
+        </p>
+      )}
+      <button type="submit" className="btn-primary" data-testid="submit-story">
+        Share my story
+      </button>
+    </form>
   );
 }
