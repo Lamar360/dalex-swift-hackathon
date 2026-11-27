@@ -170,19 +170,58 @@ check((await page.getByTestId("assistant-log").getAttribute("aria-live")) === "p
 // Replies carry a visually hidden "De Klinic demo assistant:" prefix for screen readers; strip it.
 const lastReply = async () =>
   (await page.getByTestId("assistant-reply").last().innerText()).replace(/^De Klinic demo assistant:\s*/, "");
+const SAMPLE_NOTE = "Sample details, to be confirmed by De Klinic.";
+const lastFollowUp = () => page.getByTestId("assistant-followup").last();
+// Item 2: sample menu and prices, always flagged as sample.
 await page.getByTestId("assistant-chip-menu").click();
-check((await lastReply()).includes("Menu: To be confirmed with De Klinic"), "assistant: menu answer comes from venue file (placeholder)");
+let r = await lastReply();
+check(r.includes("Jollof rice") && r.includes("GHS 85") && r.trim().endsWith(SAMPLE_NOTE), "assistant: menu uses the sample menu and ends with the sample note");
+check((await page.getByTestId("venue-offers").innerText()).includes("To be confirmed") && !(await page.getByTestId("venue-offers").innerText()).includes("GHS"), "venue page still shows real details as To be confirmed (no sample prices)");
+await page.getByTestId("assistant-chip-prices").click();
+r = await lastReply();
+check(r.includes("GHS 35") && r.includes("GHS 140") && r.trim().endsWith(SAMPLE_NOTE), "assistant: prices chip gives sample price range");
+for (const [q, want, label] of [
+  ["price of jollof", "Jollof rice with grilled chicken: GHS 85.", "dish price (price of jollof)"],
+  ["how much is a sobolo?", "Sobolo (chilled hibiscus drink): GHS 20.", "dish price (how much is a sobolo)"],
+  ["how much", "Plates run from about GHS 35", "general price (how much)"],
+  ["do you open on Sunday", "on Sundays we’re open 13:00 to 22:00", "day-specific hours (open on Sunday)"],
+  ["book for 10", "A table for 10?", "group booking with size (book for 10)"],
+  ["anything on new year's eve?", "New Year’s Eve: live highlife band", "events (new year's eve)"],
+]) {
+  await page.getByTestId("assistant-input").fill(q);
+  await page.getByTestId("assistant-send").click();
+  r = await lastReply();
+  check(r.includes(want) && r.trim().endsWith(SAMPLE_NOTE), `assistant: ${label}`);
+}
+// Item 3: address casing.
 await page.getByTestId("assistant-chip-address").click();
-check((await lastReply()).includes("Accra, Ghana") && (await lastReply()).includes("to be confirmed with de klinic"), "assistant: address is to be confirmed");
+r = await lastReply();
+check(r.includes("Accra, Ghana") && r.includes("to be confirmed with De Klinic") && !r.includes("de klinic"), "assistant: address reply says 'De Klinic' (capitalised)");
+check((await page.getByTestId("assistant-followup").count()) >= 1, "unconfirmed replies show follow-up buttons");
+// Arrival code stays as is, and confirmed answers carry no follow-up.
 await page.getByTestId("assistant-chip-code").click();
 check((await lastReply()).includes("only verified once staff confirm"), "assistant: explains the arrival code");
-await page.getByTestId("assistant-input").fill("What time do you open on Sundays?");
-await page.getByTestId("assistant-send").click();
-check((await lastReply()).startsWith("Opening hours: To be confirmed with De Klinic"), "assistant: free-text keyword match (opening hours)");
+check(!(await page.getByTestId("assistant-reply").last().locator("..").getByTestId("assistant-followup").count()), "confirmed answer has no follow-up buttons");
+// Item 4: unknown question → WhatsApp or leave for the team.
 const UNKNOWN_Q = "Is there parking for a minibus?";
 await page.getByTestId("assistant-input").fill(UNKNOWN_Q);
 await page.getByTestId("assistant-send").click();
-check((await lastReply()) === "I don’t know yet. I’ve passed your question to De Klinic.", "assistant: unknown question is passed on");
+check((await lastReply()).includes("I don’t know that one yet"), "assistant: unknown question is admitted");
+const askHref = await lastFollowUp().getByTestId("assistant-ask-whatsapp").getAttribute("href");
+check(askHref.startsWith("https://wa.me/233000000000?text=") && decodeURIComponent(askHref).includes(UNKNOWN_Q), "Ask the team on WhatsApp: sample number, question prefilled");
+const qBefore = await page.evaluate(() => JSON.parse(localStorage.getItem("deklinic.journey.v1")).questions.length);
+await lastFollowUp().getByTestId("assistant-leave").click();
+await page.getByTestId("assistant-left").last().waitFor();
+check((await lastReply()).includes("I’ve passed your question to De Klinic"), "Leave this for the team confirms to the traveller");
+const stored = await page.evaluate(() => {
+  const st = JSON.parse(localStorage.getItem("deklinic.journey.v1"));
+  return { n: st.questions.length, last: st.questions.at(-1).text, ev: st.events.some((e) => e.type === "question_asked") };
+});
+check(stored.n === qBefore + 1 && stored.last === UNKNOWN_Q && stored.ev, "left question saved for the owner with a logged event");
+// Item 5 (390px): panel stays below the header and journey stepper.
+const panelTop = (await page.getByTestId("assistant-panel").boundingBox()).y;
+const headerBottom = await page.locator("header").evaluate((h) => h.getBoundingClientRect().bottom);
+check(panelTop >= headerBottom, `chat panel does not cover the stepper (panel top ${Math.round(panelTop)} ≥ header ${Math.round(headerBottom)})`);
 await shot("2-venue-assistant");
 await page.keyboard.press("Escape");
 check((await page.getByTestId("assistant-panel").count()) === 0, "assistant closes on Esc");

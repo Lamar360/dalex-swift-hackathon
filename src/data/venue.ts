@@ -55,3 +55,37 @@ export function whatsappLink(text: string): string {
 export function arrivalMessage(code: string): string {
   return `Hi De Klinic, I'm on my way for my visit. My arrival code is ${code}.`;
 }
+
+/**
+ * SAMPLE CONTENT, NOT REAL. Invented for the demo assistant only, so travellers can see how answers will look.
+ * The venue page keeps showing "To be confirmed" for the real fields above. Every assistant answer built from
+ * this block ends with SAMPLE.note. Delete this block (or replace it with confirmed values above) for real use.
+ */
+export interface SampleMenuItem {
+  name: string;
+  /** Lower-case words a traveller might type for this item. */
+  keywords: string[];
+  /** Sample price in Ghana cedis. Not a real price. */
+  priceGhs: number;
+  kind: "food" | "drink";
+}
+
+export const SAMPLE = {
+  note: "Sample details, to be confirmed by De Klinic.",
+  menu: [
+    { name: "Jollof rice with grilled chicken", keywords: ["jollof"], priceGhs: 85, kind: "food" },
+    { name: "Waakye with egg and shito", keywords: ["waakye", "shito"], priceGhs: 60, kind: "food" },
+    { name: "Grilled tilapia with banku", keywords: ["tilapia", "fish", "banku"], priceGhs: 140, kind: "food" },
+    { name: "Kelewele (spiced fried plantain)", keywords: ["kelewele", "plantain"], priceGhs: 35, kind: "food" },
+    { name: "Red red (beans with plantain)", keywords: ["red red", "beans"], priceGhs: 55, kind: "food" },
+    { name: "Club beer (bottle)", keywords: ["club", "beer", "lager"], priceGhs: 30, kind: "drink" },
+    { name: "Sobolo (chilled hibiscus drink)", keywords: ["sobolo", "hibiscus", "bissap"], priceGhs: 20, kind: "drink" },
+  ] as SampleMenuItem[],
+  openingHours: [
+    { days: ["monday", "tuesday", "wednesday", "thursday"], label: "Monday to Thursday", hours: "12:00 to 23:00" },
+    { days: ["friday", "saturday"], label: "Friday and Saturday", hours: "12:00 to 01:00" },
+    { days: ["sunday"], label: "Sunday", hours: "13:00 to 22:00" },
+  ],
+  groupBookings: "Tables for 8 or more can be reserved a day ahead by WhatsApp, with a short pre-order for big groups.",
+  events: "New Year’s Eve: live highlife band and DJ from 20:00, booking recommended.",
+};
