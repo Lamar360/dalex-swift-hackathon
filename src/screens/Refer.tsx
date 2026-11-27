@@ -79,7 +79,7 @@ export function Refer() {
             <h2 id="preview-heading" className="text-sm font-bold tracking-wide text-cocoa-500 uppercase">
               Share preview
             </h2>
-            <div className="max-w-sm overflow-hidden rounded-2xl border border-sand-300 bg-white" data-testid="share-preview">
+            <div className="tilt max-w-sm overflow-hidden rounded-2xl border border-sand-300 bg-white shadow-[var(--shadow-card)]" data-testid="share-preview">
               <div className="bg-cocoa-900 px-4 pt-0 pb-5 text-cream-100">
                 <div className="weave -mx-4 mb-4" aria-hidden />
                 <p className="font-display text-2xl font-bold text-cream-50">De Klinic</p>

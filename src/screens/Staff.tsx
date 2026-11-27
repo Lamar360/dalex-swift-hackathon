@@ -70,7 +70,7 @@ export function Staff() {
             guest (codes never use 0, O, 1, I or L).
           </Message>
         ) : (
-          <div className="card space-y-4" data-testid="staff-result">
+          <div className="card tilt space-y-4" data-testid="staff-result">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
                 <p className="font-mono text-sm font-bold text-cocoa-500">{trip.arrivalCode}</p>

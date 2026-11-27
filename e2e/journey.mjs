@@ -25,6 +25,16 @@ const shot = async (name) => {
   await page.screenshot({ path: `${out}/${name}.png`, fullPage: true });
 };
 const text = (id) => page.getByTestId(id).innerText();
+/** True when the element's whole box sits inside the current viewport (no scrolling needed). */
+const aboveFold = (id) =>
+  page.getByTestId(id).evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    return r.top >= 0 && r.bottom <= window.innerHeight && r.right <= window.innerWidth;
+  });
+async function checkHomeAboveFold(label) {
+  const ok = (await page.locator("#hero-heading").evaluate((el) => el.getBoundingClientRect().bottom <= window.innerHeight)) && (await aboveFold("cta-venue"));
+  check(ok, `${label}: headline and See De Klinic visible without scrolling`);
+}
 const NEW_SOURCES = [
   { id: "ghana-travel-search", label: "Ghana travel search (sample)", type: "Web search", disc: 3, saved: 1, visited: 0 },
   { id: "dec-accra-itinerary", label: "December in Accra itinerary (sample)", type: "Curated itinerary", disc: 2, saved: 1, visited: 0 },
@@ -87,11 +97,30 @@ check(
 );
 const sw = await page.evaluate(() => document.documentElement.scrollWidth);
 check(sw <= 390, `no horizontal scroll at 390px (scrollWidth=${sw})`);
+check((await text("step-indicator")) === "Step 1 of 5", "Discover shows only 'Step 1 of 5'");
+check((await page.getByTestId("journey-progress").count()) === 0, "no full stepper on Discover");
+await checkHomeAboveFold("390x844 with ?src");
 await shot("1-discover");
+
+// Demo menu: View as switcher lives in it, closes on Esc and on outside click.
+check((await page.getByTestId("view-staff").count()) === 0, "View as links hidden until Demo menu opens");
+await page.getByTestId("demo-menu").click();
+await page.getByTestId("view-staff").waitFor();
+check((await page.getByTestId("demo-menu").getAttribute("aria-expanded")) === "true", "Demo menu opens (aria-expanded)");
+await page.keyboard.press("Escape");
+check((await page.getByTestId("view-staff").count()) === 0, "Demo menu closes on Esc");
+check(await page.getByTestId("demo-menu").evaluate((el) => el === document.activeElement), "focus returns to Demo button");
+await page.keyboard.press("Enter");
+await page.getByTestId("view-traveller").waitFor();
+check(await page.getByTestId("view-traveller").evaluate((el) => el === document.activeElement), "keyboard open focuses first menu item");
+await page.mouse.click(5, 500);
+check((await page.getByTestId("view-staff").count()) === 0, "Demo menu closes on outside click");
 
 // 2. Venue.
 await page.getByTestId("cta-venue").click();
 await page.waitForURL("**/venue");
+await page.getByTestId("journey-progress").waitFor({ timeout: 3000 });
+check(true, "compact stepper shown on venue");
 await page.getByTestId("story").first().waitFor();
 check((await page.getByTestId("story").count()) === 2, "Venue shows only the 2 verified stories");
 check((await page.locator(".tbc").count()) >= 6, "Venue shows 'To be confirmed' placeholders");
@@ -144,6 +173,7 @@ check(mid.decTrips === 7 && mid.decGuests === 25, "new December trip adds to exp
 check((await guestTypes()).friends === 5, "guest-type breakdown counts the new Friends trip");
 
 // 4. Staff confirms.
+await page.getByTestId("demo-menu").click();
 await page.getByTestId("view-staff").click();
 await page.waitForURL("**/staff");
 await page.getByTestId("staff-code").fill("DK-ZZZZ");
@@ -172,6 +202,7 @@ await page.getByTestId("staff-already").waitFor();
 check(true, "staff: second lookup shows already confirmed");
 
 // 5. Traveller sees the visit, leaves a story.
+await page.getByTestId("demo-menu").click();
 await page.getByTestId("view-traveller").click();
 await page.waitForURL("**/trip");
 await page.getByTestId("visit-confirmed").waitFor();
@@ -227,6 +258,7 @@ await shot("7-dashboard");
 // 9. New discovery source types work as ?src= links and appear as sample links.
 await page.goto(`${base}/`);
 await page.getByTestId("no-source").or(page.getByTestId("referral-banner")).first().waitFor();
+await checkHomeAboveFold("390x844 without ?src");
 const sampleLinks = await page.locator("a[href^='/?src=']").evaluateAll((as) => as.map((a) => a.getAttribute("href")));
 for (const src of NEW_SOURCES) {
   check(sampleLinks.includes(`/?src=${src.id}`), `Visiting page lists sample link for ${src.id}`);
@@ -248,8 +280,29 @@ for (const src of NEW_SOURCES) {
   check(r.disc === src.disc + 1, `Sources table counts the new ${src.id} discovery (${r.disc})`);
 }
 
+// Laptop: homepage above the fold at 1366x768, with and without ?src.
+await page.setViewportSize({ width: 1366, height: 768 });
+await page.goto(`${base}/?src=accra-host`);
+await page.getByTestId("referral-banner").waitFor();
+await checkHomeAboveFold("1366x768 with ?src");
+await shot("d-home-src");
+await page.goto(`${base}/`);
+await page.getByTestId("cta-venue").waitFor();
+await checkHomeAboveFold("1366x768 without ?src");
+const swd = await page.evaluate(() => document.documentElement.scrollWidth);
+check(swd <= 1366, `no horizontal scroll at 1366px (scrollWidth=${swd})`);
+
+// Reduced motion: floating layer, parallax and tilt are switched off.
+await page.emulateMedia({ reducedMotion: "reduce" });
+const still = await page.evaluate(() => {
+  const deco = getComputedStyle(document.querySelector(".hero-deco")).animationName;
+  const blob = getComputedStyle(document.querySelector(".hero-deco span")).animationName;
+  return deco === "none" && blob === "none";
+});
+check(still, "prefers-reduced-motion disables hero animations");
+await page.emulateMedia({ reducedMotion: "no-preference" });
+
 // Desktop screenshots.
-await page.setViewportSize({ width: 1280, height: 900 });
 for (const [name, path] of [["d-discover", "/?src=dec-accra-itinerary"], ["d-venue", "/venue"], ["d-trip", "/trip"], ["d-dashboard", "/dashboard"], ["d-staff", "/staff"], ["d-refer", "/refer"]]) {
   await page.goto(base + path);
   await shot(name);

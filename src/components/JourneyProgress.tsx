@@ -8,43 +8,36 @@ interface Props {
   completed: number;
 }
 
+/** Thin, single-line stepper that sits under the slim header. */
 export function JourneyProgress({ current, completed }: Props) {
   return (
-    <nav aria-label="Journey progress" className="mx-auto w-full max-w-3xl px-4">
-      <ol className="flex items-start">
+    <nav aria-label="Journey progress" className="border-t border-cream-100/10" data-testid="journey-progress">
+      <ol className="mx-auto flex h-9 max-w-3xl items-center gap-1 px-4">
         {JOURNEY_STEPS.map((step, i) => {
           const done = i <= completed && i !== current;
           const active = i === current;
           return (
-            <li key={step} className="relative flex flex-1 flex-col items-center text-center">
-              {i > 0 && (
-                <span
-                  aria-hidden
-                  className={`absolute top-4 right-1/2 h-1 w-full -translate-y-1/2 ${
-                    i <= Math.max(completed, current) ? "bg-gold-400" : "bg-cocoa-700"
-                  }`}
-                />
-              )}
+            <li key={step} className="flex flex-1 items-center gap-1.5">
               <span
                 aria-current={active ? "step" : undefined}
-                className={`relative z-10 flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${
-                  active
-                    ? "bg-gold-400 text-cocoa-950 ring-4 ring-gold-400/30"
-                    : done
-                      ? "bg-gold-400 text-cocoa-950"
-                      : "bg-cocoa-700 text-cream-200"
+                className={`h-2 w-2 shrink-0 rounded-full ${
+                  active ? "bg-gold-400 ring-3 ring-gold-400/30" : done ? "bg-gold-400" : "bg-cream-100/25"
                 }`}
-              >
-                {done ? "✓" : i + 1}
-              </span>
+              />
               <span
-                className={`mt-1.5 text-xs font-semibold tracking-wide sm:text-sm ${
-                  active ? "text-gold-400" : done ? "text-cream-100" : "text-cream-200/60"
+                className={`truncate text-xs font-semibold ${
+                  active ? "text-gold-400" : done ? "text-cream-100" : "text-cream-100/50"
                 }`}
               >
                 {step}
                 <span className="sr-only">{active ? " (current step)" : done ? " (done)" : " (upcoming)"}</span>
               </span>
+              {i < JOURNEY_STEPS.length - 1 && (
+                <span
+                  aria-hidden
+                  className={`hidden h-px flex-1 sm:block ${i < Math.max(completed, current) ? "bg-gold-400/70" : "bg-cream-100/15"}`}
+                />
+              )}
             </li>
           );
         })}

@@ -64,14 +64,14 @@ export function Dashboard() {
       </section>
 
       <section className="grid grid-cols-2 gap-3">
-        <div className="card bg-cocoa-900 text-cream-100">
+        <div className="card tilt bg-cocoa-900 text-cream-100">
           <p className="text-sm font-semibold text-sand-300">Expected December arrivals</p>
           <p className="font-display text-4xl font-bold text-gold-400" data-testid="dec-trips">
             {stats.decTrips}
           </p>
           <p className="text-sm text-cream-200">saved trips</p>
         </div>
-        <div className="card bg-cocoa-900 text-cream-100">
+        <div className="card tilt bg-cocoa-900 text-cream-100">
           <p className="text-sm font-semibold text-sand-300">Total guests</p>
           <p className="font-display text-4xl font-bold text-gold-400" data-testid="dec-guests">
             {stats.decGuests}

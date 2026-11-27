@@ -46,70 +46,82 @@ export function Discover() {
   const recorded = session.discoveredAt !== null && (rawSrc === null || session.rawSrc === rawSrc);
 
   return (
-    <div className="rise space-y-6">
-      <section aria-live="polite">
-        {!recorded ? (
-          <div className="card animate-pulse space-y-3" aria-busy="true">
-            <div className="h-4 w-1/3 rounded bg-cream-200" />
-            <div className="h-7 w-3/4 rounded bg-cream-200" />
-            <span className="sr-only">Checking where you came from…</span>
-          </div>
-        ) : source ? (
-          <div className="card border-l-8 border-gold-400" data-testid="referral-banner">
-            <p className="text-sm font-semibold tracking-wide text-clay-700 uppercase">
-              {SOURCE_TYPE_ICON[source.type]} {SOURCE_TYPE_LABEL[source.type]} · {source.country}
-            </p>
-            <p className="mt-2 text-xl leading-snug sm:text-2xl">
-              You were referred by{" "}
-              <strong className="font-display text-cocoa-950">{source.label.replace(/^Referred by /, "")}</strong>
-            </p>
-            <p className="mt-2 text-sm text-cocoa-500">
-              We’ve noted this so they get credit if you visit. (Sample data)
-            </p>
-          </div>
-        ) : session.rawSrc ? (
-          <div className="card border-l-8 border-clay-500" data-testid="unknown-source">
-            <p className="text-lg font-semibold">We didn’t recognise that link</p>
-            <p className="mt-1 text-cocoa-700">
-              The referral code <code className="rounded bg-cream-100 px-1">{session.rawSrc}</code> isn’t one we know.
-              You can still explore De Klinic below.
-            </p>
-          </div>
-        ) : (
-          <div className="card" data-testid="no-source">
-            <p className="text-lg font-semibold">Exploring on your own</p>
-            <p className="mt-1 text-cocoa-700">
-              No referral link was used. Welcome all the same.
-            </p>
-          </div>
-        )}
-      </section>
+    <div className="rise space-y-10">
+      <section className="hero px-5 py-7 sm:px-10 sm:py-10" aria-labelledby="hero-heading">
+        <div className="hero-deco" aria-hidden>
+          <span className="d1" />
+          <span className="d2" />
+          <span className="d3" />
+        </div>
 
-      <section className="space-y-4">
-        <h1 className="text-[2.5rem] leading-[1.05] font-bold sm:text-6xl">
+        <p className="text-sm font-semibold text-cocoa-500" data-testid="step-indicator">
+          Step 1 of 5
+        </p>
+
+        <div aria-live="polite" className="mt-4">
+          {!recorded ? (
+            <div className="h-[4.25rem] animate-pulse rounded-2xl bg-white/60" aria-busy="true">
+              <span className="sr-only">Checking where you came from…</span>
+            </div>
+          ) : source ? (
+            <div
+              className="tilt flex items-center gap-3 rounded-2xl bg-white/85 p-3 pr-4 shadow-[var(--shadow-card)]"
+              data-testid="referral-banner"
+            >
+              <span aria-hidden className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gold-400/25 text-xl">
+                {SOURCE_TYPE_ICON[source.type]}
+              </span>
+              <div className="min-w-0">
+                <p className="leading-snug">
+                  You were referred by{" "}
+                  <strong className="font-semibold text-cocoa-950">{source.label.replace(/^Referred by /, "")}</strong>
+                </p>
+                <p className="text-sm text-cocoa-500">
+                  {SOURCE_TYPE_LABEL[source.type]}, {source.country} · Sample data
+                </p>
+              </div>
+            </div>
+          ) : session.rawSrc ? (
+            <div className="rounded-2xl border-l-4 border-clay-500 bg-white/85 p-3 pl-4" data-testid="unknown-source">
+              <p className="font-semibold">We didn’t recognise that link</p>
+              <p className="text-sm text-cocoa-700">
+                <code className="rounded bg-cream-100 px-1">{session.rawSrc}</code> isn’t a referral we know. You can
+                still explore De Klinic.
+              </p>
+            </div>
+          ) : (
+            <p className="text-cocoa-700" data-testid="no-source">
+              Exploring on your own. No referral link was used.
+            </p>
+          )}
+        </div>
+
+        <h1
+          id="hero-heading"
+          className="mt-6 max-w-[14ch] text-[2.375rem] leading-[1.04] font-bold tracking-tight sm:text-6xl"
+        >
           Your first night back in Accra starts here.
         </h1>
-        <p className="max-w-xl text-lg text-cocoa-700">
-          Coming home for December? Plan a visit to De Klinic Restaurant &amp; Pub, save it to your Ghana
-          itinerary, and get an arrival code to show when you get there.
+        <p className="mt-4 max-w-md text-lg text-cocoa-700">
+          Coming home for December? Save De Klinic to your Ghana itinerary and get an arrival code for the door.
         </p>
-        <Link to="/venue" className="btn-primary text-lg" data-testid="cta-venue">
-          See De Klinic <span aria-hidden>→</span>
+        <Link to="/venue" className="btn-primary mt-7 text-lg" data-testid="cta-venue">
+          See De Klinic
         </Link>
       </section>
 
       {!rawSrc && (
-        <section className="card bg-cream-100 shadow-none">
+        <section className="px-1">
           <h2 className="text-lg font-bold">Try a sample referral link</h2>
           <p className="mt-1 text-sm text-cocoa-700">
             For the demo: each link simulates arriving from a different overseas source.
           </p>
-          <ul className="mt-3 space-y-2">
+          <ul className="mt-4 grid gap-2 sm:grid-cols-2">
             {sources.filter((s) => s.type !== "referral").map((s) => (
               <li key={s.id}>
                 <Link
                   to={`/?src=${s.id}`}
-                  className="flex min-h-11 items-center gap-2 font-semibold text-clay-700 underline underline-offset-4"
+                  className="tilt flex min-h-14 items-center gap-3 rounded-2xl bg-white px-4 py-3 font-semibold text-clay-700 shadow-[var(--shadow-card)]"
                 >
                   <span aria-hidden>{SOURCE_TYPE_ICON[s.type]}</span> {s.label}
                 </Link>

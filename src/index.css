@@ -25,7 +25,12 @@
   --text-base--line-height: 1.6;
 
   --radius-card: 1.25rem;
-  --shadow-card: 0 1px 0 rgb(43 26 18 / 0.06), 0 8px 24px -12px rgb(43 26 18 / 0.25);
+  /* Layered shadows: a tight contact shadow plus a soft, wide ambient one. */
+  --shadow-card: 0 1px 1px rgb(43 26 18 / 0.05), 0 2px 4px -1px rgb(43 26 18 / 0.06),
+    0 12px 28px -14px rgb(43 26 18 / 0.28);
+  --shadow-lift: 0 2px 2px rgb(43 26 18 / 0.05), 0 8px 14px -6px rgb(43 26 18 / 0.14),
+    0 26px 44px -20px rgb(43 26 18 / 0.38);
+  --shadow-float: 0 2px 4px rgb(31 18 11 / 0.08), 0 18px 40px -12px rgb(31 18 11 / 0.35);
 }
 
 @layer base {
@@ -53,6 +58,12 @@
 }
 @utility btn-primary {
   @apply btn bg-clay-500 text-cream-50 hover:bg-clay-600;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.18), 0 1px 2px rgb(138 51 23 / 0.3), 0 10px 22px -10px rgb(138 51 23 / 0.6);
+  transition: transform 160ms ease-out, background-color 160ms, box-shadow 160ms;
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.18), 0 2px 4px rgb(138 51 23 / 0.3), 0 16px 28px -12px rgb(138 51 23 / 0.65);
+  }
 }
 @utility btn-secondary {
   @apply btn border-2 border-cocoa-900 bg-transparent text-cocoa-900 hover:bg-cream-200;
@@ -88,6 +99,96 @@
 .rise {
   animation: rise 0.45s ease-out both;
 }
+
+/* ---------- Depth ---------- */
+
+/* Display cards lift and tilt slightly toward the viewer on hover/focus. */
+.tilt {
+  transform: perspective(900px) translateZ(0);
+  transition: transform 220ms ease-out, box-shadow 220ms ease-out;
+}
+.tilt:hover,
+.tilt:focus-within {
+  transform: perspective(900px) translateY(-3px) rotateX(1.5deg);
+  box-shadow: var(--shadow-lift);
+}
+
+@keyframes pop {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+.pop {
+  animation: pop 140ms ease-out both;
+  transform-origin: top right;
+}
+
+/* Homepage hero: soft gradient with a floating decorative layer. */
+.hero {
+  position: relative;
+  isolation: isolate;
+  border-radius: 1.75rem;
+  background:
+    radial-gradient(120% 90% at 100% 0%, rgb(242 181 58 / 0.22), transparent 55%),
+    radial-gradient(90% 80% at 0% 100%, rgb(196 81 43 / 0.12), transparent 60%),
+    linear-gradient(160deg, #fffdf8, var(--color-cream-100));
+  box-shadow: var(--shadow-card), inset 0 1px 0 rgb(255 255 255 / 0.9);
+  overflow: hidden;
+}
+.hero-deco {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+.hero-deco span {
+  position: absolute;
+  border-radius: 9999px;
+  animation: float 9s ease-in-out infinite alternate;
+}
+.hero-deco .d1 {
+  width: 15rem; height: 15rem; right: -4rem; top: -5rem;
+  background: radial-gradient(circle at 35% 35%, rgb(242 181 58 / 0.45), rgb(242 181 58 / 0) 70%);
+}
+.hero-deco .d2 {
+  width: 9rem; height: 9rem; right: 18%; bottom: -3.5rem;
+  background: radial-gradient(circle at 40% 40%, rgb(196 81 43 / 0.28), rgb(196 81 43 / 0) 70%);
+  animation-duration: 11s;
+  animation-delay: -3s;
+}
+.hero-deco .d3 {
+  width: 5rem; height: 5rem; right: 2.5rem; bottom: 2.5rem;
+  border: 2px solid rgb(196 81 43 / 0.18);
+  animation-duration: 7s;
+  animation-delay: -5s;
+}
+@media (max-width: 639px) {
+  .hero-deco .d3 { display: none; }
+}
+@keyframes float {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-10px, 14px, 0); }
+}
+
+/* Soft parallax: the decorative layer drifts slower than the page scrolls. */
+@supports (animation-timeline: scroll()) {
+  .hero-deco {
+    animation: parallax linear both;
+    animation-timeline: scroll(root);
+    animation-range: 0 60vh;
+  }
+  @keyframes parallax {
+    to { transform: translateY(70px); }
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .rise { animation: none; }
+  .rise,
+  .pop,
+  .hero-deco,
+  .hero-deco span { animation: none; }
+  .tilt,
+  .tilt:hover,
+  .tilt:focus-within { transform: none; transition: none; }
+  .btn-primary,
+  .btn-primary:hover { transform: none; transition: none; }
 }

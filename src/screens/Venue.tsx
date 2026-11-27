@@ -95,12 +95,12 @@ export function Venue() {
         <h2 id="offers-heading" className="text-2xl font-bold">
           What De Klinic offers
         </h2>
-        <div className="card space-y-2 border-l-8 border-clay-500">
+        <div className="card tilt space-y-2 border-l-8 border-clay-500">
           <BriefTag>From the brief</BriefTag>
           <p className="font-display text-xl font-bold text-cocoa-950">Local food and the pub experience</p>
           <p className="text-cocoa-700">Specific dishes, drinks and prices are still being confirmed with the owners.</p>
         </div>
-        <div className="card space-y-3 bg-cream-100 shadow-none" data-testid="story-to-confirm">
+        <div className="card tilt space-y-3 bg-cream-100" data-testid="story-to-confirm">
           <BriefTag>From the brief · to be confirmed with De Klinic</BriefTag>
           <h3 className="text-xl font-bold">A story worth confirming</h3>
           <blockquote className="border-l-4 border-sand-300 pl-4 text-lg leading-relaxed">
@@ -133,7 +133,7 @@ export function Venue() {
         ) : (
           <ul className="space-y-3">
             {verified.map((story) => (
-              <li key={story.id} className="card" data-testid="story">
+              <li key={story.id} className="card tilt" data-testid="story">
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-palm-100 px-3 py-1 text-sm font-bold text-palm-600">
                   <span aria-hidden>✓</span> Verified visit
                 </span>
