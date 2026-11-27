@@ -1,0 +1,93 @@
+@import "tailwindcss";
+
+/* Design tokens: warm Accra-evening palette, large readable type. */
+@theme {
+  --font-display: "Fraunces", Georgia, serif;
+  --font-sans: "Figtree", system-ui, sans-serif;
+
+  --color-cocoa-950: #1f120b;
+  --color-cocoa-900: #2b1a12;
+  --color-cocoa-700: #4a2e20;
+  --color-cocoa-500: #7a5543;
+  --color-cream-50: #fffaf2;
+  --color-cream-100: #fbf1e1;
+  --color-cream-200: #f3e2c7;
+  --color-sand-300: #e6cfa9;
+  --color-clay-500: #c4512b;
+  --color-clay-600: #a8401f;
+  --color-clay-700: #8a3317;
+  --color-gold-400: #f2b53a;
+  --color-gold-500: #e09a12;
+  --color-palm-600: #2f6b47;
+  --color-palm-100: #dcefe2;
+
+  --text-base: 1.0625rem;
+  --text-base--line-height: 1.6;
+
+  --radius-card: 1.25rem;
+  --shadow-card: 0 1px 0 rgb(43 26 18 / 0.06), 0 8px 24px -12px rgb(43 26 18 / 0.25);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-cream-50 text-cocoa-900 font-sans antialiased;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply font-display text-cocoa-950;
+    letter-spacing: -0.01em;
+  }
+  :focus-visible {
+    outline: 3px solid var(--color-gold-500);
+    outline-offset: 3px;
+    border-radius: 6px;
+  }
+}
+
+@utility btn {
+  @apply inline-flex min-h-[3.25rem] w-full items-center justify-center gap-2 rounded-full px-6 text-[1.0625rem] font-semibold transition-[transform,background-color] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto;
+}
+@utility btn-primary {
+  @apply btn bg-clay-500 text-cream-50 hover:bg-clay-600;
+}
+@utility btn-secondary {
+  @apply btn border-2 border-cocoa-900 bg-transparent text-cocoa-900 hover:bg-cream-200;
+}
+@utility card {
+  @apply rounded-[var(--radius-card)] bg-white p-5 shadow-[var(--shadow-card)] sm:p-6;
+}
+@utility tbc {
+  @apply inline-flex items-center rounded-md border border-dashed border-cocoa-500/60 bg-cream-100 px-2 py-0.5 text-sm font-medium text-cocoa-700;
+}
+@utility field-label {
+  @apply mb-1.5 block font-semibold text-cocoa-900;
+}
+@utility field {
+  @apply block min-h-[3.25rem] w-full rounded-xl border-2 border-sand-300 bg-white px-4 text-[1.0625rem] text-cocoa-950 placeholder:text-cocoa-500/70 focus:border-clay-500 focus:outline-none;
+}
+
+/* Woven-pattern band used in the header (pure CSS, no imagery). */
+.weave {
+  background-image:
+    repeating-linear-gradient(90deg, var(--color-gold-400) 0 10px, transparent 10px 20px),
+    repeating-linear-gradient(90deg, transparent 0 10px, var(--color-clay-500) 10px 20px);
+  background-size: 20px 4px, 20px 4px;
+  background-position: 0 0, 0 4px;
+  background-repeat: repeat-x;
+  height: 8px;
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+.rise {
+  animation: rise 0.45s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .rise { animation: none; }
+}
